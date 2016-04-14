@@ -60,8 +60,9 @@ private object BuildDependencies {
   val scalacheck             = "org.scalacheck" %% "scalacheck" % "1.11.4"
   val play                   = "com.typesafe.play" %% "play" % PlayVersion.current
   val `play-test`            = "com.typesafe.play" %% "play-test" % PlayVersion.current
-  val `simple-reactivemongo` = "uk.gov.hmrc" %% "simple-reactivemongo" % "4.3.0"
-  val `reactivemongo-test`   = "uk.gov.hmrc" %% "reactivemongo-test" % "1.1.0"
+  val `simple-reactivemongo` = "uk.gov.hmrc" %% "simple-reactivemongo" % "4.6.0"
+  val `reactivemongo-test`   = "uk.gov.hmrc" %% "reactivemongo-test" % "1.5.0"
+
   val `metrics-play`         = "com.kenshoo" %% "metrics-play" % "2.3.0_0.1.8"
   val metrics                = "com.codahale.metrics" % "metrics-graphite" % "3.0.2"
 }
