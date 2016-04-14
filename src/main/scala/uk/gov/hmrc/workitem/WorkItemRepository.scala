@@ -34,7 +34,7 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
                                          mongo: () => DB,
                                          itemFormat: Format[WorkItem[T]]
                                         )(implicit idFormat: Format[ID], mfItem: Manifest[T], mfID: Manifest[ID])
-  extends ReactiveRepository[WorkItem[T], ID](collectionName, mongo, itemFormat, idFormat, initialisingEc = play.api.libs.concurrent.Execution.Implicits.defaultContext)
+  extends ReactiveRepository[WorkItem[T], ID](collectionName, mongo, itemFormat, idFormat)
   with Operations.Cancel[ID]
   with Operations.FindById[ID, T] {
 
