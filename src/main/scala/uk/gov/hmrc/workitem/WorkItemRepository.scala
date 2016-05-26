@@ -73,13 +73,12 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
     Index(
       key = Seq(workItemFields.status -> IndexType.Ascending, workItemFields.availableAt -> IndexType.Ascending),
       unique = false,
+      background = true),
+    Index(
+      key = Seq(workItemFields.status -> IndexType.Ascending),
+      unique = false,
       background = true)
   )
-
-  private[workitem] val receivedAtIndex = Index(
-    key = Seq(workItemFields.status -> IndexType.Ascending, workItemFields.receivedAt -> IndexType.Ascending),
-    unique = false,
-    background = true)
 
   private def toDo(item: T): ProcessingStatus = ToDo
 
