@@ -17,9 +17,9 @@
 package uk.gov.hmrc.workitem
 
 import org.scalatest.{LoneElement, Matchers, WordSpec}
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.Json
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
-import reactivemongo.core.commands.{Update, FindAndModify}
+import reactivemongo.core.commands.{FindAndModify, Update}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -272,7 +272,8 @@ class WorkItemRepositorySpec extends WordSpec
           |  "updatedAt":{"$date":1426090745091},
           |  "status":"todo",
           |  "failureCount":0,
-          |  "item":{"id":"id1"},"_id":{"$oid":"55006afb0100000100463c03"}
+          |  "item":{"id":"id1"},
+          |  "_id":{"$oid":"55006afb0100000100463c03"}
           |}""".stripMargin)
 
       json.as[WorkItem[ExampleItem]]
