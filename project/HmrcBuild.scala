@@ -51,7 +51,12 @@ object HmrcBuild extends Build {
       Collaborators(),
       crossScalaVersions := Seq("2.11.7", "2.10.4")
     )
-    .settings(resolvers += Resolver.bintrayRepo("hmrc", "releases"))
+    .settings(
+      resolvers := Seq(
+        Resolver.bintrayRepo("hmrc", "releases"),
+        Resolver.typesafeRepo("releases")
+      )
+    )
 }
 
 private object BuildDependencies {

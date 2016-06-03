@@ -19,6 +19,8 @@ credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
 
 resolvers += Resolver.url("hmrc-sbt-plugin-releases", url("https://dl.bintray.com/hmrc/sbt-plugin-releases"))(Resolver.ivyStylePatterns)
 
+resolvers += "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/"
+
 addSbtPlugin("uk.gov.hmrc" % "sbt-settings" % "3.2.0")
 
 addSbtPlugin("uk.gov.hmrc" % "sbt-auto-build" % "1.0.0")
