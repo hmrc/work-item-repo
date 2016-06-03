@@ -17,21 +17,15 @@
 package uk.gov.hmrc.workitem
 
 import org.joda.time.chrono.ISOChronology
-import org.joda.time.{LocalDate, DateTime, Duration}
-import org.scalatest.{Suite, BeforeAndAfterEach}
+import org.joda.time.{DateTime, Duration, LocalDate}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatest.{BeforeAndAfterEach, Suite}
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.json.BSONFormats
 import uk.gov.hmrc.mongo.MongoSpecSupport
-import scala.concurrent.ExecutionContext.Implicits.global
+import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
-
-trait WithWorkItemRepository extends ScalaFutures
-  with MongoSpecSupport
-  with BeforeAndAfterEach
-  with IntegrationPatience {
-    this: Suite =>
+trait TimeSource {
 
   val timeSource = new {
     var now: DateTime = DateTime.now(ISOChronology.getInstanceUTC)
@@ -49,14 +43,35 @@ trait WithWorkItemRepository extends ScalaFutures
       now
     }
   }
+}
 
-  case class ExampleItem(id: String)
+trait WithWorkItemRepositoryModule
+  extends ScalaFutures
+  with MongoSpecSupport
+  with BeforeAndAfterEach
+  with TimeSource {
+  this: Suite =>
 
-  object ExampleItem {
-    implicit val format = Json.format[ExampleItem]
+  implicit val eif = uk.gov.hmrc.workitem.ExampleItemWithModule.formats
+  lazy val repo = new WorkItemModuleRepository[ExampleItemWithModule]("items", "testModule", mongo) {
+    override val inProgressRetryAfterProperty: String = "test-config"
+    override lazy val inProgressRetryAfter: Duration = Duration.standardHours(1)
+
+    override def now: DateTime = timeSource.now
   }
+}
+
+trait WithWorkItemRepository
+  extends ScalaFutures
+  with MongoSpecSupport
+  with BeforeAndAfterEach
+  with IntegrationPatience
+  with TimeSource {
+  this: Suite =>
+
 
   import uk.gov.hmrc.mongo.json.ReactiveMongoFormats.objectIdFormats
+  implicit val eif = uk.gov.hmrc.workitem.ExampleItem.formats
 
   lazy val repo = new WorkItemRepository[ExampleItem, BSONObjectID](
     collectionName = "items",
@@ -95,4 +110,21 @@ trait WithWorkItemRepository extends ScalaFutures
   val item6 = item1.copy(id = "id6")
 
   val allItems = Seq(item1, item2, item3, item4, item5, item6)
+}
+
+case class ExampleItem(id: String)
+
+object ExampleItem {
+  implicit val formats = Json.format[ExampleItem]
+}
+
+
+case class ExampleItemWithModule(_id: BSONObjectID, updatedAt: DateTime, value: String)
+
+object ExampleItemWithModule {
+
+  implicit val dateReads = ReactiveMongoFormats.dateTimeRead
+  implicit val dateWrites = ReactiveMongoFormats.dateTimeWrite
+  implicit val objectIdFormats = ReactiveMongoFormats.objectIdFormats
+  implicit val formats = Json.format[ExampleItemWithModule]
 }
