@@ -282,7 +282,7 @@ class WorkItemRepositorySpec extends WordSpec
     "verify number of indexes created" in {
       repo.collection.indexesManager.dropAll().futureValue
       repo.ensureIndexes.futureValue
-      repo.collection.indexesManager.list().futureValue.size should be (2 + 1) //_id index is created by default
+      repo.collection.indexesManager.list().futureValue.size should be (3 + 1) //_id index is created by default
     }
 
     "count the number of items in a specific state" in {
