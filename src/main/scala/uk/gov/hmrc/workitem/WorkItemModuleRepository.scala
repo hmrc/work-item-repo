@@ -44,6 +44,8 @@ abstract class WorkItemModuleRepository[T](
 
   override lazy val workItemFields: WorkItemFieldNames = WorkItemModuleRepository.workItemFieldNames(moduleName)
 
+  override lazy val workItemGaugeCollectionName = moduleName
+
 }
 
 object WorkItemModuleRepository {
