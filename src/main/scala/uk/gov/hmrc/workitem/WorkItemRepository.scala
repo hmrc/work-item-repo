@@ -44,6 +44,8 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
 
   def inProgressRetryAfterProperty: String
 
+  def workItemGaugeCollectionName = collectionName
+
   private implicit val dateFormats = ReactiveMongoFormats.dateTimeFormats
   private implicit val bsonFormatter = BSONFormats.BSONDocumentFormat
 

@@ -57,6 +57,6 @@ trait WorkItemMetrics {
     ProcessingStatus.processingStatuses.map(WorkItemStatusGauge).toSeq :+ TotalWorkItemsGauge()
 
   gauges map { gauge =>
-    MetricsRegistry.defaultRegistry.register(s"${repository.collection.name}.${gauge.name}", gauge)
+    MetricsRegistry.defaultRegistry.register(s"${repository.workItemGaugeCollectionName}.${gauge.name}", gauge)
   }
 }
