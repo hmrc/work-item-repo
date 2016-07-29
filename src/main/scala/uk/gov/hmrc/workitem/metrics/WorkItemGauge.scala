@@ -23,38 +23,38 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.concurrent.Future
 
-trait WorkItemGauge extends Gauge[Int] {
+abstract class WorkItemGauge(repository: WorkItemRepository[_, _]) extends Gauge[Int] {
   protected var value = 0
 
-  def refresh()(implicit repository: WorkItemRepository[_, _]): Future[Boolean] =
-    run.map { v => value = v ; true} // avoiding returning unit to improve equational reasoning
+  def refresh(): Future[Boolean] =
+    run().map { v => value = v ; true} // avoiding returning unit to improve equational reasoning
 
-  protected def run(implicit repository: WorkItemRepository[_, _]): Future[Int]
+  protected def run(): Future[Int]
 
   def name: String
 
   def getValue: Int = value
 }
 
-case class WorkItemStatusGauge(status: ProcessingStatus) extends WorkItemGauge {
-  override protected def run(implicit repository: WorkItemRepository[_, _]) = repository.count(status)
+case class WorkItemStatusGauge(status: ProcessingStatus, repository: WorkItemRepository[_, _]) extends WorkItemGauge(repository) {
+  override protected def run() = repository.count(status)
 
   override val name = status.name
 }
 
-case class TotalWorkItemsGauge() extends WorkItemGauge {
-  override protected def run(implicit repository: WorkItemRepository[_, _]) = repository.count
+case class TotalWorkItemsGauge(repository: WorkItemRepository[_, _]) extends WorkItemGauge(repository) {
+  override protected def run() = repository.count
 
   override val name = "total"
 }
 
 trait WorkItemMetrics {
-  implicit def repository: WorkItemRepository[_, _]
+  def repository: WorkItemRepository[_, _]
 
   def refresh(): Seq[Future[Boolean]] = gauges map { _.refresh() }
 
   lazy val gauges: Seq[WorkItemGauge] =
-    ProcessingStatus.processingStatuses.map(WorkItemStatusGauge).toSeq :+ TotalWorkItemsGauge()
+    ProcessingStatus.processingStatuses.map(WorkItemStatusGauge(_, repository)).toSeq :+ TotalWorkItemsGauge(repository)
 
   gauges map { gauge =>
     MetricsRegistry.defaultRegistry.register(s"${repository.workItemGaugeCollectionName}.${gauge.name}", gauge)
