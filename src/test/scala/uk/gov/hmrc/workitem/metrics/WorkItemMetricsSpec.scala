@@ -27,9 +27,14 @@ import uk.gov.hmrc.workitem.{WorkItemRepository, ProcessingStatus, WithWorkItemR
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.Future.sequence
+import scala.concurrent.duration._
 
-trait ConfiguredFakeApplication extends BeforeAndAfterAll with Eventually {
-  this: Suite =>
+class WorkItemMetricsSpec extends WordSpec
+    with Matchers
+    with WithWorkItemRepository
+    with BeforeAndAfterAll
+    with Eventually {
+
   lazy val fakeApplication = FakeApplication(additionalPlugins = Seq("com.kenshoo.play.metrics.MetricsPlugin"))
 
   override def beforeAll() {
@@ -41,37 +46,24 @@ trait ConfiguredFakeApplication extends BeforeAndAfterAll with Eventually {
     super.afterAll()
     Play.stop()
   }
-}
-
-class WorkItemMetricsSpec extends WordSpec
-  with Matchers
-  with WithWorkItemRepository
-  with ConfiguredFakeApplication {
 
   "work item metrics" should {
-    "count the number of items in a state" in {
-      ProcessingStatus.processingStatuses.foreach { status =>
-        updatedRegistryWith(status).futureValue
+    ProcessingStatus.processingStatuses.foreach { status =>
+      s"count the number of items in $status state" in {
+        updatedRegistryWith(status).futureValue shouldBe 1
         eventually { // This is because we write to primary then read from secondary
           MetricsRegistry.defaultRegistry.getGauges.get(s"items.${status.name}").getValue shouldBe 1
         }
       }
     }
-
-    "count the total number of items in the repo" in {
-      repo.pushNew(allItems, now).futureValue
-      sequence(metrics.refresh()).futureValue
-      MetricsRegistry.defaultRegistry.getGauges.get("items.total").getValue shouldBe 6
-    }
-
-    def updatedRegistryWith(status: ProcessingStatus): Future[Unit] = for {
-      item <- repo.pushNew(item1, now)
-      _ <- repo.markAs(item.id, status)
-      _ <- sequence(metrics.refresh())
-    } yield ()
   }
 
-  implicit lazy val metrics = new WorkItemMetrics {
-    override implicit def repository: WorkItemRepository[_, _] = repo
-  }
+  def updatedRegistryWith(status: ProcessingStatus): Future[Int] = for {
+    item <- repo.pushNew(item1, now)
+    _ <- repo.markAs(item.id, status)
+    totals <- sequence(metrics.map(_.refresh()))
+  } yield totals.sum
+
+  implicit lazy val metrics = WorkItemGauge.createGauges(repo, metricsRepo, 10 milliseconds)
 }
+
