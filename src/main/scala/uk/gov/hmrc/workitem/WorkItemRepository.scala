@@ -176,9 +176,6 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
   def count(state: ProcessingStatus)(implicit ec: ExecutionContext): Future[Int] = collection.db.command(
     Count(collection.name, Some(BSONDocument(workItemFields.status -> state.name))), ReadPreference.secondaryPreferred)
 
-  override def count(implicit ec: ExecutionContext): Future[Int] =
-    collection.db.command(Count(collection.name), ReadPreference.secondaryPreferred)
-
   private def setStatusOperation(newStatus: ProcessingStatus, availableAt: Option[DateTime]): JsObject = {
     val fields = Json.obj(
       workItemFields.status -> newStatus,
