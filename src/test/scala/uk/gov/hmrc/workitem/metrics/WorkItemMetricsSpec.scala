@@ -61,9 +61,10 @@ class WorkItemMetricsSpec extends WordSpec
   def updatedRegistryWith(status: ProcessingStatus): Future[Int] = for {
     item <- repo.pushNew(item1, now)
     _ <- repo.markAs(item.id, status)
-    totals <- sequence(metrics.map(_.refresh()))
-  } yield totals.sum
+    totals <- WorkItemGauge.reset(metrics, repo, ???)// sequence(metrics.map(_.refresh()))
+  } yield totals.flatMap {_.counts.get(status.name) }.getOrElse(0) // totals.sum
 
   implicit lazy val metrics = WorkItemGauge.createGauges(repo, metricsRepo, 10 milliseconds)
+
 }
 

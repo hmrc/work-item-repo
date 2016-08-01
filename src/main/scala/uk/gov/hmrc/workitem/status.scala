@@ -38,14 +38,14 @@ object ProcessingStatus {
   val processingStatuses: Set[ProcessingStatus] = Set(ToDo, InProgress, Succeeded, Failed, PermanentlyFailed, Ignored, Duplicate, Deferred, Cancelled)
   val nameToStatus:Map[String,ProcessingStatus] = processingStatuses.map(s => (s.name, s)).toMap
 
-  implicit val read = new Reads[ProcessingStatus] {
+  implicit val read: Reads[ProcessingStatus] = new Reads[ProcessingStatus] {
     override def reads(json: JsValue): JsResult[ProcessingStatus] = json match {
       case JsString(status) if nameToStatus.contains(status) => JsSuccess(nameToStatus(status))
       case other => JsError("Could not convert to ProcessingStatus from " + other)
     }
   }
 
-  implicit val write = new Writes[ProcessingStatus] {
+  implicit val write: Writes[ProcessingStatus] = new Writes[ProcessingStatus] {
     override def writes(p: ProcessingStatus): JsValue = JsString(p.name)
   }
 

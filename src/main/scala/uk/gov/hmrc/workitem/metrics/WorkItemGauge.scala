@@ -23,15 +23,16 @@ import reactivemongo.api.DB
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.workitem.{ProcessingStatus, WorkItemRepository}
-
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import reactivemongo.json.ImplicitBSONHandlers._
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import uk.gov.hmrc.mongo.json.ReactiveMongoFormats._
 
-case class WorkItemGauge(status: ProcessingStatus, metrics: MetricsRepo, atMost: Duration)
+case class WorkItemGauge(status: ProcessingStatus, metrics: MongoMetricsRepo, atMost: Duration)
                         (implicit ec: ExecutionContext) extends Gauge[Int] {
-  override def getValue(): Int = ???
+  override def getValue(): Int = {
+    ???
+  }
     /*
     Await.result(
     metrics.find("key" -> status.n).map(_.foldRight(0) { (ms, acc) => ms.value + acc }), atMost
@@ -41,33 +42,41 @@ case class WorkItemGauge(status: ProcessingStatus, metrics: MetricsRepo, atMost:
 
 object WorkItemGauge {
 
-  def reset(gauges: List[WorkItemGauge], itemRepository: WorkItemRepository[_, _], metricsDB: MetricsRepo)
+  def reset(gauges: List[WorkItemGauge], itemRepository: WorkItemRepository[_, _], metricsDB: MongoMetricsRepo)
            (implicit ec: ExecutionContext) =
     Future.traverse(gauges) { gauge =>
       itemRepository.count(gauge.status).map { (gauge.status.name, _) }
-    }.flatMap { keyValues => metricsDB.reset(MetricsStorage(values = keyValues.toMap)) }
+    }.flatMap { keyValues => metricsDB.reset(MetricsStorage(keyValues.toMap)) }
 
-  def createGauges(repository: WorkItemRepository[_,_], metrics: MetricsRepo, awaitTime: Duration)
+  def createGauges(repository: WorkItemRepository[_,_], metrics: MongoMetricsRepo, awaitTime: Duration)
                   (implicit ec: ExecutionContext): List[WorkItemGauge] =
-    ProcessingStatus.processingStatuses.map(WorkItemGauge(_, metrics, awaitTime)).map { gauge =>
+    ProcessingStatus.processingStatuses.toList.map { status =>
+      val gauge = WorkItemGauge(status, metrics, awaitTime)
       MetricsRegistry.defaultRegistry.register(s"${repository.workItemGaugeCollectionName}.${gauge.status.name}", gauge)
-    }.toList
+    }
 }
 
-case class MetricsStorage(id: BSONObjectID = BSONObjectID.generate, values: Map[String, Int])
+case class MetricsStorage(counts: Map[String, Int])
 object MetricsStorage {
-  implicit val reads: Reads[MetricsStorage] = ???
-  implicit val writes: Writes[MetricsStorage] = ???
-  implicit val format: Format[MetricsStorage] = Format.apply(reads, writes)
+
+  implicit val format: Format[MetricsStorage] = new Format[MetricsStorage] {
+    override def reads(json: JsValue): JsResult[MetricsStorage] =
+      (__ \ "counts").read[Map[String, Int]].reads(json).map { MetricsStorage(_) }
+
+    override def writes(o: MetricsStorage): JsValue = Json.toJson(o.counts)
+  }
+
 }
 
-class MetricsRepo(collectionName: String)(implicit mongo: () => DB) extends ReactiveRepository[MetricsStorage, BSONObjectID](collectionName, mongo, MetricsStorage.format) {
+class MongoMetricsRepo(collectionName: String)
+                      (implicit mongo: () => DB) extends ReactiveRepository[MetricsStorage, BSONObjectID](collectionName, mongo, MetricsStorage.format) {
 
-  def reset(storage: MetricsStorage)(implicit executionContext: ExecutionContext): Future[Option[MetricsStorage]] =
+  def reset(storage: MetricsStorage)(implicit executionContext: ExecutionContext) =
     collection.findAndUpdate(
-      selector = Json.obj("_id" -> Json.obj("$exists" -> true)),
-      update = Json.toJson(storage),
+      selector = Json.obj("counts" -> Json.obj("$exists" -> true)),
+      update = Json.obj("counts" -> storage),
       upsert = true,
       fetchNewObject = true
-    ).map(_.result)
+    ).map(_.result[MetricsStorage])
+
 }
