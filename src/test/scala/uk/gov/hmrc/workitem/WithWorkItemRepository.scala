@@ -73,8 +73,9 @@ trait WithWorkItemRepository
   import uk.gov.hmrc.mongo.json.ReactiveMongoFormats.objectIdFormats
   implicit val eif = uk.gov.hmrc.workitem.ExampleItem.formats
 
-  lazy val repo = new WorkItemRepository[ExampleItem, BSONObjectID](
-    collectionName = "items",
+  def exampleItemRepository(collectionName: String) =
+    new WorkItemRepository[ExampleItem, BSONObjectID](
+    collectionName = collectionName,
     mongo = mongo,
     itemFormat = WorkItem.workItemMongoFormat[ExampleItem]) {
 
@@ -93,6 +94,8 @@ trait WithWorkItemRepository
       val failureCount = "failureCount"
     }
   }
+
+  lazy val repo = exampleItemRepository("items")
 
   lazy val metricsRepo: MongoMetricsRepo = new MongoMetricsRepo
 

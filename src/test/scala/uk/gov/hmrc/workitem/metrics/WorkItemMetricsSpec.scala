@@ -22,12 +22,14 @@ import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.{BeforeAndAfterAll, LoneElement}
 import play.api.Play
 import play.api.test.FakeApplication
+import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.workitem.{ProcessingStatus, WithWorkItemRepository}
+import uk.gov.hmrc.workitem.{ExampleItem, ProcessingStatus, WithWorkItemRepository, WorkItemRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.collection.JavaConverters._
 
 class WorkItemMetricsSpec extends UnitSpec
     with ScalaFutures
@@ -36,7 +38,11 @@ class WorkItemMetricsSpec extends UnitSpec
     with Eventually
     with LoneElement {
 
+  override implicit val patienceConfig = PatienceConfig(timeout = 5 seconds, interval = 100 millis)
+
   lazy val fakeApplication = FakeApplication(additionalPlugins = Seq("com.kenshoo.play.metrics.MetricsPlugin"))
+
+  lazy val repo2 = exampleItemRepository("items2")
 
   override def beforeAll() {
     super.beforeAll()
@@ -48,34 +54,60 @@ class WorkItemMetricsSpec extends UnitSpec
     Play.stop()
   }
 
-  "Work item metrics" should {
-    "increment counts across all processing statuses when evaluated" in {
-      addWorkItemWithEachStatus()
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    MetricsRegistry.defaultRegistry.getGauges.asScala.foldRight(true) { case ((name, _), acc) =>
+      acc && MetricsRegistry.defaultRegistry.remove(name)
+    } shouldBe true
+    repo2.removeAll().futureValue
+  }
 
-      val result = resetMetrics()().futureValue
-      verifyGeneratedResults(result)
+  "Work item metrics" should {
+    "increment counts across all processing statuses when evaluated" in new SingleRepoTestCase {
+      addWorkItemWithEachStatus(repo)
+
+      refreshMetrics()().futureValue
+
       verifyDatabaseBackedGaugesAreAll1()
     }
-  }
 
-  def resetMetrics() = WorkItemMetrics(repo, metricsRepo, 100 milliseconds)
+    "be calculated across multiple repos for all processing status" in new MultiRepoTestCase {
+      addWorkItemWithEachStatus(repo)
+      addWorkItemWithEachStatus(repo2)
 
-  def verifyDatabaseBackedGaugesAreAll1() = eventually {
-    ProcessingStatus.processingStatuses.foreach { status =>
-      MetricsRegistry.defaultRegistry.getGauges.get(s"items.${status.name}").getValue shouldBe 1
+      val result = refreshMetrics()().futureValue
+
+      verifyGeneratedResults(List(repo, repo2), result)
     }
   }
 
-  def verifyGeneratedResults(result: Map[String, Int]) =
-    ProcessingStatus.processingStatuses.foreach { status =>
-      result(WorkItemMetrics.defaultGaugeIdentifier(repo, status)) shouldBe 1
-    }
+  trait SingleRepoTestCase {
+    def refreshMetrics() = WorkItemMetrics(repo, metricsRepo, 100 milliseconds)
 
-  def addWorkItemWithEachStatus(): Unit =
+    def verifyDatabaseBackedGaugesAreAll1() = eventually {
+      ProcessingStatus.processingStatuses.foreach { status =>
+        MetricsRegistry.defaultRegistry.getGauges.get(s"items.${status.name}").getValue shouldBe 1
+      }
+    }
+  }
+
+  trait MultiRepoTestCase {
+    def refreshMetrics() = WorkItemMetrics(List(repo, repo2), metricsRepo, 100 milliseconds)
+
+    def verifyGeneratedResults(repos: List[WorkItemRepository[ExampleItem, BSONObjectID]], result: Map[String, Int]) =
+      repos.foreach { workItemRepo =>
+        ProcessingStatus.processingStatuses.foreach { status =>
+          result(WorkItemMetrics.defaultGaugeIdentifier(workItemRepo, status)) shouldBe 1
+        }
+      }
+
+  }
+
+  def addWorkItemWithEachStatus(exampleItemRepository: WorkItemRepository[ExampleItem, BSONObjectID]): Unit =
     Future.traverse(ProcessingStatus.processingStatuses) { status =>
       for {
-        item   <- repo.pushNew(item1, now)
-        _      <- repo.markAs(item.id, status)
+        item   <- exampleItemRepository.pushNew(item1, now)
+        _      <- exampleItemRepository.markAs(item.id, status)
       } yield ()
     }.futureValue
 

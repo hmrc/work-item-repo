@@ -63,10 +63,18 @@ object WorkItemMetrics {
   }
 
   def apply(workItemRepository: WorkItemRepository[_, _], metrics: MongoMetricsRepo, gaugeReadTimeout: Duration)
-           (implicit ec: ExecutionContext) = {
+           (implicit ec: ExecutionContext): MetricsRefresh = {
     registerGauges(workItemRepository, metrics, gaugeReadTimeout)
     runMetrics(workItemRepository, metrics)
   }
+
+  def apply(workItemRepositories: List[WorkItemRepository[_,_]], metricsDB: MongoMetricsRepo, timeout: Duration)
+           (implicit ec: ExecutionContext): MetricsRefresh = {
+    val registered: List[WorkItemMetrics.MetricsRefresh] =
+      workItemRepositories.map(WorkItemMetrics(_, metricsDB, timeout))
+    () => Future.fold(registered.map { _.apply() })(Map.empty[String, Int]) { _ ++ _ }
+  }
+
 
 }
 
