@@ -18,22 +18,23 @@ package uk.gov.hmrc.workitem.metrics
 
 import com.kenshoo.play.metrics.MetricsRegistry
 import org.joda.time.DateTime.now
-import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, Suite, WordSpec}
+import org.scalatest.concurrent.{Eventually, ScalaFutures}
+import org.scalatest.{BeforeAndAfterAll, LoneElement}
 import play.api.Play
 import play.api.test.FakeApplication
-import uk.gov.hmrc.workitem.{WorkItemRepository, ProcessingStatus, WithWorkItemRepository}
+import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.workitem.{ProcessingStatus, WithWorkItemRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.Future.sequence
 import scala.concurrent.duration._
 
-class WorkItemMetricsSpec extends WordSpec
-    with Matchers
+class WorkItemMetricsSpec extends UnitSpec
+    with ScalaFutures
     with WithWorkItemRepository
     with BeforeAndAfterAll
-    with Eventually {
+    with Eventually
+    with LoneElement {
 
   lazy val fakeApplication = FakeApplication(additionalPlugins = Seq("com.kenshoo.play.metrics.MetricsPlugin"))
 
@@ -47,24 +48,36 @@ class WorkItemMetricsSpec extends WordSpec
     Play.stop()
   }
 
-  "work item metrics" should {
-    ProcessingStatus.processingStatuses.foreach { status =>
-      s"count the number of items in $status state" in {
-        updatedRegistryWith(status).futureValue shouldBe 1
-        eventually { // This is because we write to primary then read from secondary
-          MetricsRegistry.defaultRegistry.getGauges.get(s"items.${status.name}").getValue shouldBe 1
-        }
-      }
+  "Work item metrics" should {
+    "increment counts across all processing statuses when evaluated" in {
+      addWorkItemWithEachStatus()
+
+      val result = resetMetrics()().futureValue
+      verifyGeneratedResults(result)
+      verifyDatabaseBackedGaugesAreAll1()
     }
   }
 
-  def updatedRegistryWith(status: ProcessingStatus): Future[Int] = for {
-    item <- repo.pushNew(item1, now)
-    _ <- repo.markAs(item.id, status)
-    totals <- WorkItemGauge.reset(metrics, repo, ???)// sequence(metrics.map(_.refresh()))
-  } yield totals.flatMap {_.counts.get(status.name) }.getOrElse(0) // totals.sum
+  def resetMetrics() = WorkItemMetrics(repo, metricsRepo, 100 milliseconds)
 
-  implicit lazy val metrics = WorkItemGauge.createGauges(repo, metricsRepo, 10 milliseconds)
+  def verifyDatabaseBackedGaugesAreAll1() = eventually {
+    ProcessingStatus.processingStatuses.foreach { status =>
+      MetricsRegistry.defaultRegistry.getGauges.get(s"items.${status.name}").getValue shouldBe 1
+    }
+  }
+
+  def verifyGeneratedResults(result: Map[String, Int]) =
+    ProcessingStatus.processingStatuses.foreach { status =>
+      result(WorkItemMetrics.defaultGaugeIdentifier(repo, status)) shouldBe 1
+    }
+
+  def addWorkItemWithEachStatus(): Unit =
+    Future.traverse(ProcessingStatus.processingStatuses) { status =>
+      for {
+        item   <- repo.pushNew(item1, now)
+        _      <- repo.markAs(item.id, status)
+      } yield ()
+    }.futureValue
 
 }
 

@@ -70,7 +70,6 @@ trait WithWorkItemRepository
   with TimeSource {
   this: Suite =>
 
-
   import uk.gov.hmrc.mongo.json.ReactiveMongoFormats.objectIdFormats
   implicit val eif = uk.gov.hmrc.workitem.ExampleItem.formats
 
@@ -95,7 +94,7 @@ trait WithWorkItemRepository
     }
   }
 
-  lazy val metricsRepo: MongoMetricsRepo = new MongoMetricsRepo(collectionName = "metrics")
+  lazy val metricsRepo: MongoMetricsRepo = new MongoMetricsRepo
 
   protected override def beforeEach() {
     import scala.concurrent.ExecutionContext.Implicits.global
