@@ -35,7 +35,8 @@ object HmrcBuild extends Build {
     pegdown     % "test",
     scalacheck  % "test",
     `play-test` % "test",
-    `reactivemongo-test` % "test"
+    `reactivemongo-test` % "test",
+    hmrcTest
   )
 
 
@@ -70,6 +71,7 @@ private object BuildDependencies {
 
   val `metrics-play`         = "com.kenshoo" %% "metrics-play" % "2.3.0_0.1.8"
   val metrics                = "com.codahale.metrics" % "metrics-graphite" % "3.0.2"
+  val hmrcTest               = "uk.gov.hmrc"  %% "hmrctest" % "1.8.0" % "test"
 }
 
 object Collaborators {

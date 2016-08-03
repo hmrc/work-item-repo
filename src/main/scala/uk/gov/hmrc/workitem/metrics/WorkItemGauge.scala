@@ -18,45 +18,87 @@ package uk.gov.hmrc.workitem.metrics
 
 import com.codahale.metrics.Gauge
 import com.kenshoo.play.metrics.MetricsRegistry
+import play.api.libs.json._
+import reactivemongo.api.DB
+import reactivemongo.api.indexes.{Index, IndexType}
+import reactivemongo.bson.BSONObjectID
+import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.workitem.{ProcessingStatus, WorkItemRepository}
-import scala.concurrent.ExecutionContext.Implicits.global
 
-import scala.concurrent.Future
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 
-trait WorkItemGauge extends Gauge[Int] {
-  protected var value = 0
-
-  def refresh()(implicit repository: WorkItemRepository[_, _]): Future[Boolean] =
-    run.map { v => value = v ; true} // avoiding returning unit to improve equational reasoning
-
-  protected def run(implicit repository: WorkItemRepository[_, _]): Future[Int]
-
-  def name: String
-
-  def getValue: Int = value
+final case class WorkItemGauge(id: String, metrics: MongoMetricsRepo, timeout: Duration)
+                              (implicit ec: ExecutionContext) extends Gauge[Int] {
+  override def getValue(): Int = Await.result(metrics.findCountByKey(id).map { _.getOrElse(0) }, timeout)
 }
 
-case class WorkItemStatusGauge(status: ProcessingStatus) extends WorkItemGauge {
-  override protected def run(implicit repository: WorkItemRepository[_, _]) = repository.count(status)
+object WorkItemMetrics {
+  type MetricsRefresh = () => Future[Map[String, Int]]
 
-  override val name = status.name
-}
+  def defaultGaugeIdentifier(repo: WorkItemRepository[_,_], status: ProcessingStatus): String =
+    s"${repo.workItemGaugeCollectionName}.${status.name}"
 
-case class TotalWorkItemsGauge() extends WorkItemGauge {
-  override protected def run(implicit repository: WorkItemRepository[_, _]) = repository.count
+  def registerGauges(repository: WorkItemRepository[_,_], metrics: MongoMetricsRepo, gaugeReadTimeout: Duration)
+                    (implicit ec: ExecutionContext): Unit =
+    ProcessingStatus.processingStatuses.toList.foreach { status =>
+      val identifier = defaultGaugeIdentifier(repository, status)
+      MetricsRegistry.defaultRegistry.register(
+        identifier, WorkItemGauge(identifier, metrics, gaugeReadTimeout)
+      )
+    }
 
-  override val name = "total"
-}
+  def runMetrics(workItemRepo: WorkItemRepository[_, _], metricsRepo: MongoMetricsRepo)
+                (implicit ec: ExecutionContext): MetricsRefresh = {
+    def countThenStore(status: ProcessingStatus): Future[Option[MetricsCount]] =
+      workItemRepo.count(status).flatMap { count =>
+        metricsRepo.reset(MetricsCount(defaultGaugeIdentifier(workItemRepo, status), count))
+      }
 
-trait WorkItemMetrics {
-  implicit def repository: WorkItemRepository[_, _]
-
-  def refresh(): Seq[Future[Boolean]] = gauges map { _.refresh() }
-
-  lazy val gauges: Seq[WorkItemGauge] =
-    ProcessingStatus.processingStatuses.map(WorkItemStatusGauge).toSeq :+ TotalWorkItemsGauge()
-
-  gauges map { gauge =>
-    MetricsRegistry.defaultRegistry.register(s"${repository.workItemGaugeCollectionName}.${gauge.name}", gauge)
+    () => Future.traverse(ProcessingStatus.processingStatuses.toList) { countThenStore(_) }.map {
+      _.flatMap(
+        _.flatMap(MetricsCount.unapply).toList
+      ).toMap
+    }
   }
+
+  def apply(workItemRepository: WorkItemRepository[_, _], metrics: MongoMetricsRepo, gaugeReadTimeout: Duration)
+           (implicit ec: ExecutionContext): MetricsRefresh = {
+    registerGauges(workItemRepository, metrics, gaugeReadTimeout)
+    runMetrics(workItemRepository, metrics)
+  }
+
+  def apply(workItemRepositories: List[WorkItemRepository[_,_]], metricsDB: MongoMetricsRepo, timeout: Duration)
+           (implicit ec: ExecutionContext): MetricsRefresh = {
+    val registered: List[WorkItemMetrics.MetricsRefresh] =
+      workItemRepositories.map(WorkItemMetrics(_, metricsDB, timeout))
+    () => Future.fold(registered.map { _.apply() })(Map.empty[String, Int]) { _ ++ _ }
+  }
+
+
+}
+
+final case class MetricsCount(name: String, count: Int)
+class MongoMetricsRepo(collectionName: String = "metrics")
+                      (implicit mongo: () => DB) extends ReactiveRepository[MetricsCount, BSONObjectID](collectionName,
+                                                                                                        mongo,
+                                                                                                        Json.format[MetricsCount]) {
+
+  override def indexes: Seq[Index] = Seq(
+    Index(key = Seq("name" -> IndexType.Ascending), name = Some("metric_key_idx"), unique = true, background = true)
+  )
+
+  def reset(count: MetricsCount)(implicit ec: ExecutionContext) =
+    collection.findAndUpdate(
+      selector = Json.obj("name" -> count.name),
+      update = Json.toJson(count).as[JsObject],
+      upsert = true,
+      fetchNewObject = true
+    ).map(_.result[MetricsCount])
+
+  def findCountByKey(key: String)(implicit ec: ExecutionContext): Future[Option[Int]] =
+    collection.find(Json.obj("name" -> key)).
+      one[MetricsCount].
+      map(_.map(_.count))
+
 }

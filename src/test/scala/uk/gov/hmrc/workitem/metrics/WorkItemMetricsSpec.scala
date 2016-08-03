@@ -18,19 +18,31 @@ package uk.gov.hmrc.workitem.metrics
 
 import com.kenshoo.play.metrics.MetricsRegistry
 import org.joda.time.DateTime.now
-import org.scalatest.concurrent.Eventually
-import org.scalatest.{BeforeAndAfterAll, Matchers, Suite, WordSpec}
+import org.scalatest.concurrent.{Eventually, ScalaFutures}
+import org.scalatest.{BeforeAndAfterAll, LoneElement}
 import play.api.Play
 import play.api.test.FakeApplication
-import uk.gov.hmrc.workitem.{WorkItemRepository, ProcessingStatus, WithWorkItemRepository}
+import reactivemongo.bson.BSONObjectID
+import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.workitem.{ExampleItem, ProcessingStatus, WithWorkItemRepository, WorkItemRepository}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.Future.sequence
+import scala.concurrent.duration._
+import scala.collection.JavaConverters._
 
-trait ConfiguredFakeApplication extends BeforeAndAfterAll with Eventually {
-  this: Suite =>
+class WorkItemMetricsSpec extends UnitSpec
+    with ScalaFutures
+    with WithWorkItemRepository
+    with BeforeAndAfterAll
+    with Eventually
+    with LoneElement {
+
+  override implicit val patienceConfig = PatienceConfig(timeout = 5 seconds, interval = 100 millis)
+
   lazy val fakeApplication = FakeApplication(additionalPlugins = Seq("com.kenshoo.play.metrics.MetricsPlugin"))
+
+  lazy val repo2 = exampleItemRepository("items2")
 
   override def beforeAll() {
     super.beforeAll()
@@ -41,37 +53,63 @@ trait ConfiguredFakeApplication extends BeforeAndAfterAll with Eventually {
     super.afterAll()
     Play.stop()
   }
-}
 
-class WorkItemMetricsSpec extends WordSpec
-  with Matchers
-  with WithWorkItemRepository
-  with ConfiguredFakeApplication {
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    MetricsRegistry.defaultRegistry.getGauges.asScala.foldRight(true) { case ((name, _), acc) =>
+      acc && MetricsRegistry.defaultRegistry.remove(name)
+    } shouldBe true
+    repo2.removeAll().futureValue
+  }
 
-  "work item metrics" should {
-    "count the number of items in a state" in {
+  "Work item metrics" should {
+    "increment counts across all processing statuses when evaluated" in new SingleRepoTestCase {
+      addWorkItemWithEachStatus(repo)
+
+      refreshMetrics()().futureValue
+
+      verifyDatabaseBackedGaugesAreAll1()
+    }
+
+    "be calculated across multiple repos for all processing status" in new MultiRepoTestCase {
+      addWorkItemWithEachStatus(repo)
+      addWorkItemWithEachStatus(repo2)
+
+      val result = refreshMetrics()().futureValue
+
+      verifyGeneratedResults(List(repo, repo2), result)
+    }
+  }
+
+  trait SingleRepoTestCase {
+    def refreshMetrics() = WorkItemMetrics(repo, metricsRepo, 100 milliseconds)
+
+    def verifyDatabaseBackedGaugesAreAll1() = eventually {
       ProcessingStatus.processingStatuses.foreach { status =>
-        updatedRegistryWith(status).futureValue
-        eventually { // This is because we write to primary then read from secondary
-          MetricsRegistry.defaultRegistry.getGauges.get(s"items.${status.name}").getValue shouldBe 1
-        }
+        MetricsRegistry.defaultRegistry.getGauges.get(s"items.${status.name}").getValue shouldBe 1
       }
     }
-
-    "count the total number of items in the repo" in {
-      repo.pushNew(allItems, now).futureValue
-      sequence(metrics.refresh()).futureValue
-      MetricsRegistry.defaultRegistry.getGauges.get("items.total").getValue shouldBe 6
-    }
-
-    def updatedRegistryWith(status: ProcessingStatus): Future[Unit] = for {
-      item <- repo.pushNew(item1, now)
-      _ <- repo.markAs(item.id, status)
-      _ <- sequence(metrics.refresh())
-    } yield ()
   }
 
-  implicit lazy val metrics = new WorkItemMetrics {
-    override implicit def repository: WorkItemRepository[_, _] = repo
+  trait MultiRepoTestCase {
+    def refreshMetrics() = WorkItemMetrics(List(repo, repo2), metricsRepo, 100 milliseconds)
+
+    def verifyGeneratedResults(repos: List[WorkItemRepository[ExampleItem, BSONObjectID]], result: Map[String, Int]) =
+      repos.foreach { workItemRepo =>
+        ProcessingStatus.processingStatuses.foreach { status =>
+          result(WorkItemMetrics.defaultGaugeIdentifier(workItemRepo, status)) shouldBe 1
+        }
+      }
+
   }
+
+  def addWorkItemWithEachStatus(exampleItemRepository: WorkItemRepository[ExampleItem, BSONObjectID]): Unit =
+    Future.traverse(ProcessingStatus.processingStatuses) { status =>
+      for {
+        item   <- exampleItemRepository.pushNew(item1, now)
+        _      <- exampleItemRepository.markAs(item.id, status)
+      } yield ()
+    }.futureValue
+
 }
+
