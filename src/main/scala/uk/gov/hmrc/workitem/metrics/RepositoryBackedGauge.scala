@@ -28,8 +28,8 @@ import uk.gov.hmrc.workitem.{ProcessingStatus, WorkItemRepository}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-final case class WorkItemGauge(id: String, metrics: MongoMetricsRepo, timeout: Duration)
-                              (implicit ec: ExecutionContext) extends Gauge[Int] {
+final case class RepositoryBackedGauge(id: String, metrics: MongoMetricsRepo, timeout: Duration)
+                                      (implicit ec: ExecutionContext) extends Gauge[Int] {
   override def getValue(): Int = Await.result(metrics.findCountByKey(id).map { _.getOrElse(0) }, timeout)
 }
 
@@ -44,7 +44,7 @@ object WorkItemMetrics {
     ProcessingStatus.processingStatuses.toList.foreach { status =>
       val identifier = defaultGaugeIdentifier(repository, status)
       MetricsRegistry.defaultRegistry.register(
-        identifier, WorkItemGauge(identifier, metrics, gaugeReadTimeout)
+        identifier, RepositoryBackedGauge(identifier, metrics, gaugeReadTimeout)
       )
     }
 
