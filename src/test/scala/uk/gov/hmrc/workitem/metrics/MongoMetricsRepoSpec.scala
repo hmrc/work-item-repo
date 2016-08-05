@@ -25,7 +25,7 @@ import uk.gov.hmrc.workitem.ToDo
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits._
 
-class MetricsRepoSpec extends UnitSpec with MongoSpecSupport with ScalaFutures with LoneElement with BeforeAndAfterEach {
+class MongoMetricsRepoSpec extends UnitSpec with MongoSpecSupport with ScalaFutures with LoneElement with BeforeAndAfterEach {
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30 seconds, interval = 100 millis)
 
@@ -48,6 +48,33 @@ class MetricsRepoSpec extends UnitSpec with MongoSpecSupport with ScalaFutures w
       metricsRepo.reset(storage).futureValue
 
       metricsRepo.findAll().futureValue.loneElement shouldBe storage
+    }
+  }
+
+  "increment" should {
+    "insert the key and value if not already present" in {
+      val storage = MetricsCount("test", 7)
+
+      metricsRepo.increment(storage).futureValue.get.count shouldBe 7
+
+      metricsRepo.findAll().futureValue.loneElement shouldBe storage
+    }
+
+    "add to an exsiting total" in {
+      val name = "test.test"
+
+      val existingTotal = MetricsCount(name, 5)
+      val otherUnrelatedMetric = MetricsCount("other.test", 5)
+      val add = MetricsCount(name, 7)
+
+      val newCount = for {
+        _ <- metricsRepo.reset(existingTotal)
+        _ <- metricsRepo.increment(otherUnrelatedMetric)
+        result <- metricsRepo.increment(add)
+      } yield result.map { _.count }
+
+      newCount.futureValue shouldBe Some(12)
+      metricsRepo.findCountByKey(name).futureValue shouldBe Some(12)
     }
   }
 

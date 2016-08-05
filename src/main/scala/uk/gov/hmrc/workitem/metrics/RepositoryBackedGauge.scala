@@ -84,6 +84,17 @@ class MongoMetricsRepo(collectionName: String = "metrics")
                                                                                                         mongo,
                                                                                                         Json.format[MetricsCount]) {
 
+  def increment(name: String)(implicit ec: ExecutionContext) : Future[MetricsCount] = increment(MetricsCount(name, 1))
+
+  def increment(storage: MetricsCount)(implicit ec: ExecutionContext) =
+    collection.findAndUpdate(
+       selector = Json.obj("name" -> storage.name),
+       upsert = true,
+       update = Json.obj("$inc" -> Json.obj("count" -> storage.count)),
+        fetchNewObject = true
+    ).map(_.result[MetricsCount])
+
+
   override def indexes: Seq[Index] = Seq(
     Index(key = Seq("name" -> IndexType.Ascending), name = Some("metric_key_idx"), unique = true, background = true)
   )
