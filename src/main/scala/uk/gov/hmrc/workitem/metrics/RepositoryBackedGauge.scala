@@ -84,7 +84,7 @@ class MongoMetricsRepo(collectionName: String = "metrics")
                                                                                                         mongo,
                                                                                                         Json.format[MetricsCount]) {
 
-  def increment(name: String)(implicit ec: ExecutionContext) : Future[MetricsCount] = increment(MetricsCount(name, 1))
+  def increment(name: String)(implicit ec: ExecutionContext) : Future[Option[MetricsCount]] = increment(MetricsCount(name, 1))
 
   def increment(storage: MetricsCount)(implicit ec: ExecutionContext) =
     collection.findAndUpdate(
