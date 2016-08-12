@@ -298,6 +298,44 @@ class WorkItemRepositorySpec extends WordSpec
       repo.count(Duplicate).futureValue shouldBe 0
     }
 
+    "pull a 'ToDo state item' when available" in {
+      val inProgressRecord: WorkItem[ExampleItem] = repo.pushNew(item1, timeSource.now).futureValue
+      repo.markAs(inProgressRecord.id, InProgress).futureValue should be(true)
+
+      val failedRecord: WorkItem[ExampleItem] = repo.pushNew(item2, timeSource.now.plusDays(1)).futureValue
+      repo.markAs(failedRecord.id, Failed).futureValue should be(true)
+
+      val todoRecord: WorkItem[ExampleItem] = repo.pushNew(item3, timeSource.now.plusDays(1)).futureValue
+      repo.markAs(todoRecord.id, ToDo).futureValue should be(true)
+
+      timeSource.advance(repo.inProgressRetryAfter.plus(1))
+      val result = repo.pullOutstanding(failedBefore = timeSource.now.plusDays(1), availableBefore = timeSource.now.plusDays(10)).futureValue.get
+      result should have(
+        'item(item3),
+        'status(InProgress),
+        'failureCount(0)
+      )
+    }
+
+    "pull a 'Failed state item not updated since failedBefore' when available and there is not any ToDo item" in {
+      val inProgressRecord: WorkItem[ExampleItem] = repo.pushNew(item1, timeSource.now).futureValue
+      repo.markAs(inProgressRecord.id, InProgress).futureValue should be(true)
+
+      val failedRecord: WorkItem[ExampleItem] = repo.pushNew(item2, timeSource.now.plusDays(2)).futureValue
+      repo.markAs(failedRecord.id, Failed).futureValue should be(true)
+
+      val anotherInProgressRecord: WorkItem[ExampleItem] = repo.pushNew(item3, timeSource.now).futureValue
+      repo.markAs(anotherInProgressRecord.id, InProgress).futureValue should be(true)
+
+      timeSource.advance(repo.inProgressRetryAfter.plus(1))
+      val result = repo.pullOutstanding(failedBefore = timeSource.now, availableBefore = timeSource.now.plusDays(3)).futureValue.get
+      result should have(
+        'item(item2),
+        'status(InProgress),
+        'failureCount(1)
+      )
+    }
+
   }
 
   "Cancelling a notification" should {
