@@ -150,7 +150,7 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
     def inProgressQuery(failedBefore: DateTime, availableBefore: DateTime): JsObject = {
       Json.obj(workItemFields.status -> InProgress, workItemFields.updatedAt -> Json.obj("$lt" -> now.minus(inProgressRetryAfter)))
     }
-    
+
     findNextItemIdByQuery(todoQuery(failedBefore, availableBefore)).flatMap {
       case None => findNextItemIdByQuery(failedQuery(failedBefore, availableBefore)).flatMap {
         case None => findNextItemIdByQuery(inProgressQuery(failedBefore, availableBefore))
