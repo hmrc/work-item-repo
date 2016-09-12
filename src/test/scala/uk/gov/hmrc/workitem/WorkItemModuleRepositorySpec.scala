@@ -81,7 +81,7 @@ class WorkItemModuleRepositorySpec
     }
 
     "use the module name as the gauge name" in {
-      repo.workItemGaugeCollectionName should be ("testModule")
+      repo.metricPrefix should be ("testModule")
     }
 
     "change state successfully" in {
