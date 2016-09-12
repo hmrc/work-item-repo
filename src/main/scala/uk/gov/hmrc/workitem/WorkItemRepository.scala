@@ -26,6 +26,7 @@ import reactivemongo.core.commands._
 import reactivemongo.json.BSONFormats
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import uk.gov.hmrc.workitem.metrics.MetricsSource
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
@@ -36,7 +37,8 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
                                         )(implicit idFormat: Format[ID], mfItem: Manifest[T], mfID: Manifest[ID])
   extends ReactiveRepository[WorkItem[T], ID](collectionName, mongo, itemFormat, idFormat)
   with Operations.Cancel[ID]
-  with Operations.FindById[ID, T] {
+  with Operations.FindById[ID, T]
+  with MetricsSource {
 
   def now: DateTime
 
@@ -44,7 +46,13 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
 
   def inProgressRetryAfterProperty: String
 
-  def workItemGaugeCollectionName = collectionName
+  def metricPrefix = collectionName
+
+  override def metrics(implicit ec: ExecutionContext): Future[Map[String, Int]] = {
+    Future.traverse(ProcessingStatus.processingStatuses.toList) { status =>
+      count(status).map(value => s"$metricPrefix.${status.name}" -> value)
+    }.map(_.toMap)
+  }
 
   private implicit val dateFormats = ReactiveMongoFormats.dateTimeFormats
   private implicit val bsonFormatter = BSONFormats.BSONDocumentFormat

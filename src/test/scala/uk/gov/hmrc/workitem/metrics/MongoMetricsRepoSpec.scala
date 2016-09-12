@@ -29,7 +29,7 @@ class MongoMetricsRepoSpec extends UnitSpec with MongoSpecSupport with ScalaFutu
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30 seconds, interval = 100 millis)
 
-  lazy val metricsRepo = new MongoMetricsRepo(databaseName)
+  lazy val metricsRepo = new MongoMetricsRepository(databaseName)
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -41,40 +41,13 @@ class MongoMetricsRepoSpec extends UnitSpec with MongoSpecSupport with ScalaFutu
     metricsRepo.removeAll().futureValue
   }
 
-  "reset" should {
+  "update" should {
     "store the provided MetricsStorage instance with the 'name' key" in {
       val storage = MetricsCount(ToDo.name, 5)
 
-      metricsRepo.reset(storage).futureValue
+      metricsRepo.update(storage).futureValue
 
       metricsRepo.findAll().futureValue.loneElement shouldBe storage
-    }
-  }
-
-  "increment" should {
-    "insert the key and value if not already present" in {
-      val storage = MetricsCount("test", 7)
-
-      metricsRepo.increment(storage).futureValue.get.count shouldBe 7
-
-      metricsRepo.findAll().futureValue.loneElement shouldBe storage
-    }
-
-    "add to an exsiting total" in {
-      val name = "test.test"
-
-      val existingTotal = MetricsCount(name, 5)
-      val otherUnrelatedMetric = MetricsCount("other.test", 5)
-      val add = MetricsCount(name, 7)
-
-      val newCount = for {
-        _ <- metricsRepo.reset(existingTotal)
-        _ <- metricsRepo.increment(otherUnrelatedMetric)
-        result <- metricsRepo.increment(add)
-      } yield result.map { _.count }
-
-      newCount.futureValue shouldBe Some(12)
-      metricsRepo.findCountByKey(name).futureValue shouldBe Some(12)
     }
   }
 

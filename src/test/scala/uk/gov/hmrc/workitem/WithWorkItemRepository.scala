@@ -24,7 +24,7 @@ import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.workitem.metrics.MongoMetricsRepo
+import uk.gov.hmrc.workitem.metrics.MongoMetricsRepository
 
 trait TimeSource {
 
@@ -97,7 +97,7 @@ trait WithWorkItemRepository
 
   lazy val repo = exampleItemRepository("items")
 
-  lazy val metricsRepo: MongoMetricsRepo = new MongoMetricsRepo
+  lazy val metricsRepo: MongoMetricsRepository = new MongoMetricsRepository
 
   protected override def beforeEach() {
     import scala.concurrent.ExecutionContext.Implicits.global
