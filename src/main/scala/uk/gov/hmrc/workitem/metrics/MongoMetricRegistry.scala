@@ -23,43 +23,43 @@ import uk.gov.hmrc.lock.ExclusiveTimePeriodLock
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
-trait MetricsSource {
+trait MetricSource {
   def metrics(implicit ec: ExecutionContext): Future[Map[String, Int]]
 }
 
-final case class RepositoryBackedCachedGauge(id: String, metrics: MetricsCache)
+final case class RepositoryBackedCachedGauge(id: String, metrics: MetricCache)
                                        (implicit ec: ExecutionContext) extends Gauge[Int] {
   override def getValue: Int =  metrics.cache.getOrElse(id, 0)
 }
 
-trait MetricsCache {
+trait MetricCache {
 
   val cache = mutable.Map[String, Int]()
 
-  def refreshCache(allMetrics: List[MetricsCount]) = {
+  def refreshCache(allMetrics: List[MetricCount]) = {
     allMetrics.foreach(m => cache.put(m.name, m.count))
     val asMap: Map[String, Int] = allMetrics.map(m => m.name -> m.count).toMap
     cache.keys.foreach(key => if(!asMap.contains(key)) cache.remove(key))
   }
 }
 
-trait MongoMetricsRegistry extends MetricsCache {
+trait MongoMetricRegistry extends MetricCache {
 
   def lock: ExclusiveTimePeriodLock
 
-  def metricsRepository: MongoMetricsRepository
+  def metricRepository: MongoMetricRepository
 
-  def metricsSources: List[MetricsSource]
+  def metricSources: List[MetricSource]
 
-  def metricsRegistry: MetricRegistry
+  def metricRegistry: MetricRegistry
 
 
-  private[metrics] def updateMetricsRepository()(implicit ec: ExecutionContext): Future[Unit] = {
-    Future.traverse(metricsSources) { source => source.metrics }
+  private def updateMetricRepository()(implicit ec: ExecutionContext): Future[Unit] = {
+    Future.traverse(metricSources) { source => source.metrics }
       .map(list => {
         val currentMetrics: Map[String, Int] = list reduce (_ ++ _)
         currentMetrics.map {
-          case (key, value) => metricsRepository.update(MetricsCount(key, value))
+          case (key, value) => metricRepository.update(MetricCount(key, value))
         }
       })
   }
@@ -67,15 +67,15 @@ trait MongoMetricsRegistry extends MetricsCache {
   def refreshAll()(implicit ec: ExecutionContext): Future[Unit] = {
 
     for {
-      updated <- lock.tryToAcquireOrRenewLock { updateMetricsRepository }
-      allMetrics <- metricsRepository.findAll(ReadPreference.secondaryPreferred)
+      updated <- lock.tryToAcquireOrRenewLock { updateMetricRepository }
+      allMetrics <- metricRepository.findAll(ReadPreference.secondaryPreferred)
     } yield {
 
       refreshCache(allMetrics)
 
       allMetrics
-        .foreach(metric => if (!metricsRegistry.getGauges.containsKey(metric.name))
-          metricsRegistry.register(metric.name, RepositoryBackedCachedGauge(metric.name, this)))
+        .foreach(metric => if (!metricRegistry.getGauges.containsKey(metric.name))
+          metricRegistry.register(metric.name, RepositoryBackedCachedGauge(metric.name, this)))
 
     }
 

@@ -20,7 +20,6 @@ import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.MetricsRegistry
 import org.joda.time.Duration
 import org.mockito.Matchers._
-import org.mockito.{Matchers, Mockito}
 import org.mockito.Mockito._
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.mock.MockitoSugar
@@ -34,10 +33,10 @@ import uk.gov.hmrc.workitem.{ProcessingStatus, WithWorkItemRepository}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
-class MongoMetricsRegistrySpec extends UnitSpec
+class MongoMetricRegistrySpec extends UnitSpec
 with ScalaFutures
 with WithWorkItemRepository
 with BeforeAndAfterAll
@@ -66,11 +65,11 @@ with MockitoSugar {
     override val holdLockFor = Duration.millis(1)
   }
 
-  def registryFor(sources: List[MetricsSource]) = new MongoMetricsRegistry {
-    override val metricsRepository = new MongoMetricsRepository
-    override val metricsSources = sources
+  def registryFor(sources: List[MetricSource]) = new MongoMetricRegistry {
+    override val metricRepository = new MongoMetricRepository
+    override val metricSources = sources
     override val lock = exclusiveTimePeriodLock
-    override val metricsRegistry: MetricRegistry = MetricsRegistry.defaultRegistry
+    override val metricRegistry: MetricRegistry = MetricsRegistry.defaultRegistry
   }
 
 
@@ -99,7 +98,7 @@ with MockitoSugar {
 
     "refresh all metrics of any type of source" in {
 
-      val anySource = new MetricsSource {
+      val anySource = new MetricSource {
         override def metrics(implicit ec: ExecutionContext) = Future.successful(Map("a" -> 1, "b" -> 2))
       }
 
@@ -121,7 +120,7 @@ with MockitoSugar {
         } yield ()
       }.futureValue
 
-      val anotherSource = new MetricsSource {
+      val anotherSource = new MetricSource {
         override def metrics(implicit ec: ExecutionContext) = Future.successful(Map("a" -> 1, "b" -> 2))
       }
 
@@ -138,64 +137,64 @@ with MockitoSugar {
     }
 
     "cache the metrics" in {
-      val anySource = new MetricsSource {
+      val anySource = new MetricSource {
         override def metrics(implicit ec: ExecutionContext) = Future.successful(Map("a" -> 1, "b" -> 2))
       }
 
-      val mockedRegistry = new MongoMetricsRegistry {
-        override val metricsRepository = mock[MongoMetricsRepository]
-        override val metricsSources = List(anySource)
+      val mockedRegistry = new MongoMetricRegistry {
+        override val metricRepository = mock[MongoMetricRepository]
+        override val metricSources = List(anySource)
         override val lock = exclusiveTimePeriodLock
-        override val metricsRegistry: MetricRegistry = MetricsRegistry.defaultRegistry
+        override val metricRegistry: MetricRegistry = MetricsRegistry.defaultRegistry
       }
 
-      when(mockedRegistry.metricsRepository.findAll(any[ReadPreference])(any[ExecutionContext]))
-        .thenReturn(Future(List(MetricsCount("a",1), MetricsCount("b",2))))
+      when(mockedRegistry.metricRepository.findAll(any[ReadPreference])(any[ExecutionContext]))
+        .thenReturn(Future(List(MetricCount("a",1), MetricCount("b",2))))
 
-      when(mockedRegistry.metricsRepository.update(any[MetricsCount])(any[ExecutionContext]))
-        .thenReturn(mock[Future[Option[MetricsCount]]])
+      when(mockedRegistry.metricRepository.update(any[MetricCount])(any[ExecutionContext]))
+        .thenReturn(mock[Future[Option[MetricCount]]])
 
       mockedRegistry.refreshAll().futureValue
 
-      verify(mockedRegistry.metricsRepository).findAll(any[ReadPreference])(any[ExecutionContext])
-      verify(mockedRegistry.metricsRepository, times(2)).update(any[MetricsCount])(any[ExecutionContext])
+      verify(mockedRegistry.metricRepository).findAll(any[ReadPreference])(any[ExecutionContext])
+      verify(mockedRegistry.metricRepository, times(2)).update(any[MetricCount])(any[ExecutionContext])
 
 
       MetricsRegistry.defaultRegistry.getGauges.get(s"a").getValue shouldBe 1
       MetricsRegistry.defaultRegistry.getGauges.get(s"b").getValue shouldBe 2
 
-      verifyNoMoreInteractions(mockedRegistry.metricsRepository)
+      verifyNoMoreInteractions(mockedRegistry.metricRepository)
     }
 
     "update the cache even if the lock is not acquired" in {
-      val anySource = new MetricsSource {
+      val anySource = new MetricSource {
         override def metrics(implicit ec: ExecutionContext) = Future.successful(Map("a" -> 1, "b" -> 2))
       }
 
-      val mockedRegistry = new MongoMetricsRegistry {
-        override val metricsRepository = mock[MongoMetricsRepository]
-        override val metricsSources = List(anySource)
+      val mockedRegistry = new MongoMetricRegistry {
+        override val metricRepository = mock[MongoMetricRepository]
+        override val metricSources = List(anySource)
         override val lock = new ExclusiveTimePeriodLock {
           override val lockId: String = "test-lock"
           override val repo: LockRepository = mock[LockRepository]
           override val holdLockFor: Duration = Duration.millis(1)
         }
-        override val metricsRegistry: MetricRegistry = MetricsRegistry.defaultRegistry
+        override val metricRegistry: MetricRegistry = MetricsRegistry.defaultRegistry
       }
 
       when(mockedRegistry.lock.repo.renew(any[String], any[String], any[Duration])).thenReturn(Future(false))
       when(mockedRegistry.lock.repo.lock(any[String], any[String], any[Duration])).thenReturn(Future(false))
-      when(mockedRegistry.metricsRepository.findAll(any[ReadPreference])(any[ExecutionContext]))
-        .thenReturn(Future(List(MetricsCount("a",1), MetricsCount("b",2))))
+      when(mockedRegistry.metricRepository.findAll(any[ReadPreference])(any[ExecutionContext]))
+        .thenReturn(Future(List(MetricCount("a",1), MetricCount("b",2))))
 
       mockedRegistry.refreshAll().futureValue
 
-      verify(mockedRegistry.metricsRepository).findAll(any[ReadPreference])(any[ExecutionContext])
+      verify(mockedRegistry.metricRepository).findAll(any[ReadPreference])(any[ExecutionContext])
 
       MetricsRegistry.defaultRegistry.getGauges.get(s"a").getValue shouldBe 1
       MetricsRegistry.defaultRegistry.getGauges.get(s"b").getValue shouldBe 2
 
-      verifyNoMoreInteractions(mockedRegistry.metricsRepository)
+      verifyNoMoreInteractions(mockedRegistry.metricRepository)
 
     }
   }
@@ -203,26 +202,26 @@ with MockitoSugar {
   "MetricsCache" should {
 
     "be empty when created" in {
-      new MetricsCache {} .cache shouldBe empty
+      new MetricCache {} .cache shouldBe empty
     }
 
     "initialize with a list of metrics" in {
-      val metrics =  new MetricsCache {}
-      metrics.refreshCache(List(MetricsCount("a", 1), MetricsCount("b", 2)))
+      val metrics =  new MetricCache {}
+      metrics.refreshCache(List(MetricCount("a", 1), MetricCount("b", 2)))
 
       metrics.cache("a") shouldBe 1
       metrics.cache("b") shouldBe 2
     }
 
     "add elements that were not present before" in {
-      val metrics =  new MetricsCache {}
+      val metrics =  new MetricCache {}
 
-      metrics.refreshCache(List(MetricsCount("a", 1)))
+      metrics.refreshCache(List(MetricCount("a", 1)))
 
       metrics.cache("a") shouldBe 1
       metrics.cache.get("b") shouldBe None
 
-      metrics.refreshCache(List(MetricsCount("a", 1), MetricsCount("b", 2)))
+      metrics.refreshCache(List(MetricCount("a", 1), MetricCount("b", 2)))
 
       metrics.cache("a") shouldBe 1
       metrics.cache("b") shouldBe 2
@@ -230,14 +229,14 @@ with MockitoSugar {
     }
 
     "remove elements that are no longer there" in {
-      val metrics =  new MetricsCache {}
+      val metrics =  new MetricCache {}
 
-      metrics.refreshCache(List(MetricsCount("a", 1), MetricsCount("b", 2)))
+      metrics.refreshCache(List(MetricCount("a", 1), MetricCount("b", 2)))
 
       metrics.cache("a") shouldBe 1
       metrics.cache("b") shouldBe 2
 
-      metrics.refreshCache(List(MetricsCount("a", 1)))
+      metrics.refreshCache(List(MetricCount("a", 1)))
 
       metrics.cache("a") shouldBe 1
       metrics.cache.get("b") shouldBe None

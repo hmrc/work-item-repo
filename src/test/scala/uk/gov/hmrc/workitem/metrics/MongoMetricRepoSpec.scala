@@ -25,11 +25,11 @@ import uk.gov.hmrc.workitem.ToDo
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits._
 
-class MongoMetricsRepoSpec extends UnitSpec with MongoSpecSupport with ScalaFutures with LoneElement with BeforeAndAfterEach {
+class MongoMetricRepoSpec extends UnitSpec with MongoSpecSupport with ScalaFutures with LoneElement with BeforeAndAfterEach {
 
   override implicit val patienceConfig = PatienceConfig(timeout = 30 seconds, interval = 100 millis)
 
-  lazy val metricsRepo = new MongoMetricsRepository(databaseName)
+  lazy val metricsRepo = new MongoMetricRepository(databaseName)
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -43,7 +43,7 @@ class MongoMetricsRepoSpec extends UnitSpec with MongoSpecSupport with ScalaFutu
 
   "update" should {
     "store the provided MetricsStorage instance with the 'name' key" in {
-      val storage = MetricsCount(ToDo.name, 5)
+      val storage = MetricCount(ToDo.name, 5)
 
       metricsRepo.update(storage).futureValue
 

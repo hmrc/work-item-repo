@@ -24,23 +24,23 @@ import uk.gov.hmrc.mongo.ReactiveRepository
 
 import scala.concurrent.ExecutionContext
 
-final case class MetricsCount(name: String, count: Int)
+final case class MetricCount(name: String, count: Int)
 
-class MongoMetricsRepository(collectionName: String = "metrics")
-                            (implicit mongo: () => DB) extends ReactiveRepository[MetricsCount, BSONObjectID](collectionName,
+class MongoMetricRepository(collectionName: String = "metrics")
+                           (implicit mongo: () => DB) extends ReactiveRepository[MetricCount, BSONObjectID](collectionName,
                                                                                                         mongo,
-                                                                                                        Json.format[MetricsCount]) {
+                                                                                                        Json.format[MetricCount]) {
 
   override def indexes: Seq[Index] = Seq(
     Index(key = Seq("name" -> IndexType.Ascending), name = Some("metric_key_idx"), unique = true, background = true)
   )
 
-  def update(count: MetricsCount)(implicit ec: ExecutionContext) =
+  def update(count: MetricCount)(implicit ec: ExecutionContext) =
     collection.findAndUpdate(
       selector = Json.obj("name" -> count.name),
       update = Json.toJson(count).as[JsObject],
       upsert = true,
       fetchNewObject = true
-    ).map(_.result[MetricsCount])
+    ).map(_.result[MetricCount])
 
 }
