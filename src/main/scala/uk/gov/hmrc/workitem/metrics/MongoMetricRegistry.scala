@@ -54,17 +54,18 @@ trait MongoMetricRegistry extends MetricCache {
   def metricRegistry: MetricRegistry
 
 
-  private def updateMetricRepository()(implicit ec: ExecutionContext): Future[Unit] = {
+  private def updateMetricRepository()(implicit ec: ExecutionContext): Future[Map[String, Int]] = {
     Future.traverse(metricSources) { source => source.metrics }
       .map(list => {
         val currentMetrics: Map[String, Int] = list reduce (_ ++ _)
         currentMetrics.map {
           case (key, value) => metricRepository.update(MetricCount(key, value))
         }
+        currentMetrics
       })
   }
 
-  def refreshAll()(implicit ec: ExecutionContext): Future[Unit] = {
+  def refreshAll()(implicit ec: ExecutionContext): Future[Map[String, Int]] = {
 
     for {
       updated <- lock.tryToAcquireOrRenewLock { updateMetricRepository }
@@ -76,6 +77,8 @@ trait MongoMetricRegistry extends MetricCache {
       allMetrics
         .foreach(metric => if (!metricRegistry.getGauges.containsKey(metric.name))
           metricRegistry.register(metric.name, RepositoryBackedCachedGauge(metric.name, this)))
+
+      allMetrics.map(m => m.name -> m.count).toMap
 
     }
 

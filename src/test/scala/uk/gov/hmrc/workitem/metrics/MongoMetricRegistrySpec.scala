@@ -111,6 +111,21 @@ with MockitoSugar {
 
     }
 
+    "return all metrics in the registry" in {
+
+      val anySource = new MetricSource {
+        override def metrics(implicit ec: ExecutionContext) = Future.successful(Map("a" -> 1, "b" -> 2))
+      }
+
+      val registry = registryFor(List(anySource))
+
+      val allMetrics: Map[String, Int] = registry.refreshAll().futureValue
+
+      allMetrics(s"a") shouldBe 1
+      allMetrics(s"b") shouldBe 2
+
+    }
+
     "be calculated across multiple soruces" in {
 
       Future.traverse(ProcessingStatus.processingStatuses) { status =>
