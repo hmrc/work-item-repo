@@ -16,17 +16,47 @@
 
 package uk.gov.hmrc.workitem
 
-import org.scalatest.{LoneElement, Matchers, WordSpec}
+import org.scalatest.{Entry, LoneElement, Matchers, WordSpec}
 import play.api.libs.json.Json
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import reactivemongo.core.commands.{FindAndModify, Update}
+import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class WorkItemRepositorySpec extends WordSpec
   with Matchers
   with WithWorkItemRepository
   with LoneElement {
+
+  def createWorkItemsWith(statuses: Seq[ProcessingStatus]) = {
+    Future.traverse(statuses) { status =>
+      for {
+        item <- repo.pushNew(item1, DateTimeUtils.now)
+        _ <- repo.markAs(item.id, status)
+      } yield ()
+    }.futureValue
+  }
+
+  "The work item repo as metrics source" should {
+    "return the counts for the all processing statuses as map of metrics" in {
+      createWorkItemsWith(ProcessingStatus.processingStatuses.toSeq)
+
+      repo.metrics.futureValue should contain only (ProcessingStatus.processingStatuses.toSeq.
+        map(status => (s"$collectionName.${status.name}", 1)): _*)
+    }
+
+    "return different map of metric counts for different processing statuses" in {
+      createWorkItemsWith(Seq(ToDo, ToDo, InProgress))
+
+      repo.metrics.futureValue should contain allOf(
+        (s"$collectionName.${ToDo.name}", 2),
+        (s"$collectionName.${InProgress.name}", 1),
+        (s"$collectionName.${Succeeded.name}", 0)
+        )
+    }
+  }
 
   "The work item repo" should {
     "be able to save and reload a item" in {
@@ -34,14 +64,14 @@ class WorkItemRepositorySpec extends WordSpec
       val savedItem = repo.findAll().futureValue.loneElement
 
       returnedItem should have(
-        'item(item1),
-        'status(ToDo),
-        'failureCount(0),
-        'receivedAt(timeSource.now),
-        'updatedAt(timeSource.now)
+        'item (item1),
+        'status (ToDo),
+        'failureCount (0),
+        'receivedAt (timeSource.now),
+        'updatedAt (timeSource.now)
       )
 
-      returnedItem should equal (savedItem)
+      returnedItem should equal(savedItem)
     }
 
     "be able to save and reload a bulk set of items" in {
@@ -51,21 +81,21 @@ class WorkItemRepositorySpec extends WordSpec
       val savedItems = repo.findAll().futureValue
 
       every(savedItems) should have(
-        'status(ToDo),
-        'failureCount(0),
-        'receivedAt(timeSource.now),
-        'updatedAt(timeSource.now)
+        'status (ToDo),
+        'failureCount (0),
+        'receivedAt (timeSource.now),
+        'updatedAt (timeSource.now)
       )
       savedItems.map(_.item) should contain theSameElementsAs items
-      returnedItems should equal (savedItems)
+      returnedItems should equal(savedItems)
     }
 
     "pull ToDo items which were received before the requested time" in {
       repo.pushNew(item1, timeSource.now).futureValue
       repo.pullOutstanding(failedBefore = timeSource.now, availableBefore = timeSource.now.plusSeconds(10)).futureValue.get should have(
-        'item(item1),
-        'status(InProgress),
-        'failureCount(0)
+        'item (item1),
+        'status (InProgress),
+        'failureCount (0)
       )
     }
 
@@ -73,9 +103,9 @@ class WorkItemRepositorySpec extends WordSpec
       repo.pushNew(item1, timeSource.now).futureValue
       repo.markAs(repo.findAll().futureValue.loneElement.id, Succeeded).futureValue should be(true)
       repo.findAll().futureValue.loneElement should have(
-        'status(Succeeded),
-        'failureCount(0),
-        'item(item1))
+        'status (Succeeded),
+        'failureCount (0),
+        'item (item1))
     }
 
     "return false trying to mark a non-existent item as done" in {
@@ -98,9 +128,9 @@ class WorkItemRepositorySpec extends WordSpec
       repo.pushNew(item1, timeSource.now).futureValue
       repo.markAs(repo.findAll().futureValue.loneElement.id, Failed).futureValue should be(true)
       repo.pullOutstanding(failedBefore = timeSource.now.plusSeconds(1), availableBefore = timeSource.now.plusSeconds(1)).futureValue.get should have(
-        'item(item1),
-        'status(InProgress),
-        'failureCount(1)
+        'item (item1),
+        'status (InProgress),
+        'failureCount (1)
       )
     }
 
@@ -109,9 +139,9 @@ class WorkItemRepositorySpec extends WordSpec
       repo.markAs(repo.findAll().futureValue.loneElement.id, InProgress).futureValue should be(true)
       timeSource.advance(repo.inProgressRetryAfter.plus(1))
       repo.pullOutstanding(failedBefore = timeSource.now, availableBefore = timeSource.now).futureValue.get should have(
-        'item(item1),
-        'status(InProgress),
-        'failureCount(0)
+        'item (item1),
+        'status (InProgress),
+        'failureCount (0)
       )
     }
 
@@ -137,8 +167,8 @@ class WorkItemRepositorySpec extends WordSpec
       val id = repo.findAll().futureValue.head.id
       repo.complete(id, Succeeded).futureValue should be(true)
       repo.findById(id).futureValue.get should have(
-        'status(Succeeded),
-        'failureCount(0)
+        'status (Succeeded),
+        'failureCount (0)
       )
     }
 
@@ -148,8 +178,8 @@ class WorkItemRepositorySpec extends WordSpec
       val id = repo.findAll().futureValue.head.id
       repo.complete(id, Failed).futureValue should be(true)
       repo.findById(id).futureValue.get should have(
-        'status(Failed),
-        'failureCount(1)
+        'status (Failed),
+        'failureCount (1)
       )
     }
 
@@ -158,8 +188,8 @@ class WorkItemRepositorySpec extends WordSpec
       val id = repo.findAll().futureValue.head.id
       repo.complete(id, Failed).futureValue should be(false)
       repo.findById(id).futureValue.get should have(
-        'status(ToDo),
-        'failureCount(0)
+        'status (ToDo),
+        'failureCount (0)
       )
     }
 
@@ -173,14 +203,14 @@ class WorkItemRepositorySpec extends WordSpec
       val savedItem = repo.findAll().futureValue.loneElement
 
       returnedItem should have(
-        'item(item1),
-        'status(Deferred),
-        'failureCount(0),
-        'receivedAt(timeSource.now),
-        'updatedAt(timeSource.now)
+        'item (item1),
+        'status (Deferred),
+        'failureCount (0),
+        'receivedAt (timeSource.now),
+        'updatedAt (timeSource.now)
       )
 
-      returnedItem should equal (savedItem)
+      returnedItem should equal(savedItem)
     }
 
     "be able to selectively save an item in a custom initial status" in {
@@ -190,22 +220,22 @@ class WorkItemRepositorySpec extends WordSpec
       }
       val returnedItems = repo.pushNew(Seq(item1, item2), timeSource.now, maybeDefer _).futureValue
       exactly(1, returnedItems) should have(
-        'item(item1),
-        'status(Deferred),
-        'failureCount(0),
-        'receivedAt(timeSource.now),
-        'updatedAt(timeSource.now)
+        'item (item1),
+        'status (Deferred),
+        'failureCount (0),
+        'receivedAt (timeSource.now),
+        'updatedAt (timeSource.now)
       )
       exactly(1, returnedItems) should have(
-        'item(item2),
-        'status(ToDo),
-        'failureCount(0),
-        'receivedAt(timeSource.now),
-        'updatedAt(timeSource.now)
+        'item (item2),
+        'status (ToDo),
+        'failureCount (0),
+        'receivedAt (timeSource.now),
+        'updatedAt (timeSource.now)
       )
 
-      repo.pullOutstanding(failedBefore = timeSource.now, availableBefore = timeSource.now.plusSeconds(10)).futureValue.get.item should be (item2)
-      repo.pullOutstanding(failedBefore = timeSource.now, availableBefore = timeSource.now.plusSeconds(10)).futureValue should be (None)
+      repo.pullOutstanding(failedBefore = timeSource.now, availableBefore = timeSource.now.plusSeconds(10)).futureValue.get.item should be(item2)
+      repo.pullOutstanding(failedBefore = timeSource.now, availableBefore = timeSource.now.plusSeconds(10)).futureValue should be(None)
     }
 
     "create an item with a specified time for future processing" in {
@@ -224,20 +254,20 @@ class WorkItemRepositorySpec extends WordSpec
       repo.pushNew(item1, timeSource.now).futureValue
       repo.markAs(repo.findAll().futureValue.loneElement.id, ToDo, availableAt = Some(timeSource.now.plusDays(1))).futureValue should be(true)
       repo.pullOutstanding(failedBefore = timeSource.now.plusDays(1), availableBefore = timeSource.now.plusDays(10)).futureValue.get should have(
-        'item(item1),
-        'status(InProgress),
-        'failureCount(0)
+        'item (item1),
+        'status (InProgress),
+        'failureCount (0)
       )
     }
 
     "pull an item deferred for future processing as Failed" in {
       repo.pushNew(item1, timeSource.now).futureValue
       repo.markAs(repo.findAll().futureValue.loneElement.id, Failed, availableAt = Some(timeSource.now.plusDays(2))).futureValue should be(true)
-      repo.pullOutstanding(failedBefore = timeSource.now.plusDays(1), availableBefore = timeSource.now.plusDays(1)).futureValue should be (None)
+      repo.pullOutstanding(failedBefore = timeSource.now.plusDays(1), availableBefore = timeSource.now.plusDays(1)).futureValue should be(None)
       repo.pullOutstanding(failedBefore = timeSource.now.plusDays(1), availableBefore = timeSource.now.plusDays(3)).futureValue.get should have(
-        'item(item1),
-        'status(InProgress),
-        'failureCount(1)
+        'item (item1),
+        'status (InProgress),
+        'failureCount (1)
       )
     }
 
@@ -251,15 +281,15 @@ class WorkItemRepositorySpec extends WordSpec
       repo.collection.db.command(
         FindAndModify(
           collection = repo.collection.name,
-          query =  Json.obj("_id" -> insertRecord.id).as[BSONDocument],
+          query = Json.obj("_id" -> insertRecord.id).as[BSONDocument],
           modify = Update(BSONDocument("$unset" -> BSONDocument("availableAt" -> "")), fetchNewObject = true)
         )
       ).map(_.map(Json.toJson(_))).futureValue
 
       repo.pullOutstanding(failedBefore = timeSource.now.plusDays(1), availableBefore = timeSource.now.plusDays(3)).futureValue.get should have(
-        'item(item1),
-        'status(InProgress),
-        'failureCount(1)
+        'item (item1),
+        'status (InProgress),
+        'failureCount (1)
       )
     }
 
@@ -282,7 +312,7 @@ class WorkItemRepositorySpec extends WordSpec
     "verify number of indexes created" in {
       repo.collection.indexesManager.dropAll().futureValue
       repo.ensureIndexes.futureValue
-      repo.collection.indexesManager.list().futureValue.size should be (3 + 1) //_id index is created by default
+      repo.collection.indexesManager.list().futureValue.size should be(3 + 1) //_id index is created by default
     }
 
     "count the number of items in a specific state" in {
@@ -311,9 +341,9 @@ class WorkItemRepositorySpec extends WordSpec
       timeSource.advance(repo.inProgressRetryAfter.plus(1))
       val result = repo.pullOutstanding(failedBefore = timeSource.now.plusDays(1), availableBefore = timeSource.now.plusDays(10)).futureValue.get
       result should have(
-        'item(item3),
-        'status(InProgress),
-        'failureCount(0)
+        'item (item3),
+        'status (InProgress),
+        'failureCount (0)
       )
     }
 
@@ -330,9 +360,9 @@ class WorkItemRepositorySpec extends WordSpec
       timeSource.advance(repo.inProgressRetryAfter.plus(1))
       val result = repo.pullOutstanding(failedBefore = timeSource.now, availableBefore = timeSource.now.plusDays(3)).futureValue.get
       result should have(
-        'item(item2),
-        'status(InProgress),
-        'failureCount(1)
+        'item (item2),
+        'status (InProgress),
+        'failureCount (1)
       )
     }
 
@@ -347,21 +377,21 @@ class WorkItemRepositorySpec extends WordSpec
         val id = repo.pushNew(item1, timeSource.now).futureValue.id
         repo.markAs(id, status).futureValue should be(true)
         repo.cancel(id).futureValue should be(StatusUpdateResult.Updated(previousStatus = status, newStatus = Cancelled))
-        repo.findById(id).futureValue.get should have('status(Cancelled))
+        repo.findById(id).futureValue.get should have('status (Cancelled))
       }
     }
 
     for (status <- ProcessingStatus.processingStatuses -- allowedStatuses) {
       s"not work if it is in the $status state" in {
         val id = repo.pushNew(item1, timeSource.now).futureValue.id
-        repo.markAs(id, status).futureValue should be (true)
-        repo.cancel(id).futureValue should be (StatusUpdateResult.NotUpdated(currentState = status))
-        repo.findById(id).futureValue.get should have ('status (status))
+        repo.markAs(id, status).futureValue should be(true)
+        repo.cancel(id).futureValue should be(StatusUpdateResult.NotUpdated(currentState = status))
+        repo.findById(id).futureValue.get should have('status (status))
       }
     }
 
     "not work if it is missing" in {
-      repo.cancel(BSONObjectID.generate).futureValue should be (StatusUpdateResult.NotFound)
+      repo.cancel(BSONObjectID.generate).futureValue should be(StatusUpdateResult.NotFound)
     }
   }
 }

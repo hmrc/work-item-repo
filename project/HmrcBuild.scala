@@ -30,6 +30,8 @@ object HmrcBuild extends Build {
     `simple-reactivemongo`,
     `metrics-play`         % "provided",
     metrics                % "provided",
+    mongoLock,
+    metrix,
 
     scalaTest   % "test",
     pegdown     % "test",
@@ -72,6 +74,8 @@ private object BuildDependencies {
   val `metrics-play`         = "com.kenshoo" %% "metrics-play" % "2.3.0_0.1.8"
   val metrics                = "com.codahale.metrics" % "metrics-graphite" % "3.0.2"
   val hmrcTest               = "uk.gov.hmrc"  %% "hmrctest" % "1.8.0" % "test"
+  val mongoLock              = "uk.gov.hmrc"  %% "mongo-lock"              % "3.4.0"
+  val metrix                 = "uk.gov.hmrc"  %% "metrix"              % "0.3.0"
 }
 
 object Collaborators {
