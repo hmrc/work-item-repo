@@ -24,7 +24,6 @@ import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.workitem.metrics.MongoMetricRepository
 
 trait TimeSource {
 
@@ -95,14 +94,13 @@ trait WithWorkItemRepository
     }
   }
 
-  lazy val repo = exampleItemRepository("items")
+  val collectionName = "items"
+  lazy val repo = exampleItemRepository(collectionName)
 
-  lazy val metricsRepo: MongoMetricRepository = new MongoMetricRepository
 
   protected override def beforeEach() {
     import scala.concurrent.ExecutionContext.Implicits.global
     repo.removeAll().futureValue
-    metricsRepo.removeAll().futureValue
   }
 
   val today = LocalDate.now(ISOChronology.getInstanceUTC)

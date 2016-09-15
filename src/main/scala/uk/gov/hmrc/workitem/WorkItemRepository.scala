@@ -19,14 +19,14 @@ package uk.gov.hmrc.workitem
 import org.joda.time.{DateTime, Duration}
 import play.api.Play
 import play.api.libs.json._
-import reactivemongo.api.{ReadPreference, DB}
+import reactivemongo.api.{DB, ReadPreference}
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import reactivemongo.core.commands._
 import reactivemongo.json.BSONFormats
+import uk.gov.hmrc.metrix.domain.MetricSource
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.workitem.metrics.MetricSource
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
