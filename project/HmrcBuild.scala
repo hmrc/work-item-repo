@@ -75,7 +75,7 @@ private object BuildDependencies {
   val metrics                = "com.codahale.metrics" % "metrics-graphite" % "3.0.2"
   val hmrcTest               = "uk.gov.hmrc"  %% "hmrctest" % "1.8.0" % "test"
   val mongoLock              = "uk.gov.hmrc"  %% "mongo-lock"              % "3.4.0"
-  val metrix                 = "uk.gov.hmrc"  %% "metrix"              % "0.3.0"
+  val metrix                 = "uk.gov.hmrc"  %% "metrix"              % "0.4.0"
 }
 
 object Collaborators {
