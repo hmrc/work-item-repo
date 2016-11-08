@@ -73,12 +73,11 @@ object WorkItemModuleRepository {
 
     val fieldNames = workItemFieldNames(moduleName)
     Json.obj(
-      fieldNames.availableAt -> time,
-      fieldNames.status -> ToDo,
-      fieldNames.failureCount -> 0,
-      fieldNames.updatedAt -> time
+      "$setOnInsert" -> Json.obj(fieldNames.availableAt -> time),
+      "$set" -> Json.obj(fieldNames.updatedAt -> time, fieldNames.status -> ToDo, fieldNames.failureCount -> 0)
     )
   }
+
 
   def formatsOf[T](moduleName:String)(implicit trd:Reads[T]): Format[WorkItem[T]] = {
     val reads: Reads[WorkItem[T]] = (

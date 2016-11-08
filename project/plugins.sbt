@@ -13,13 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
 credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
 
-
-resolvers += Resolver.url("hmrc-sbt-plugin-releases", url("https://dl.bintray.com/hmrc/sbt-plugin-releases"))(Resolver.ivyStylePatterns)
-
-resolvers += "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/"
+resolvers ++= Seq(
+  "hmrc-sbt-plugin-releases" at "https://dl.bintray.com/hmrc/sbt-plugin-releases",
+  "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/"
+)
 
 addSbtPlugin("uk.gov.hmrc" % "sbt-settings" % "3.2.0")
 
