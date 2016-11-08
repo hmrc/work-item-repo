@@ -48,13 +48,15 @@ class WorkItemRepositorySpec extends WordSpec
     }
 
     "return different map of metric counts for different processing statuses" in {
+      def metricKey(status: ProcessingStatus) = s"$collectionName.${status.name}"
+
       createWorkItemsWith(Seq(ToDo, ToDo, InProgress))
 
       repo.metrics.futureValue should contain allOf(
-        (s"$collectionName.${ToDo.name}", 2),
-        (s"$collectionName.${InProgress.name}", 1),
-        (s"$collectionName.${Succeeded.name}", 0)
-        )
+        metricKey(ToDo) -> 2,
+        metricKey(InProgress) -> 1,
+        metricKey(Succeeded) -> 0
+      )
     }
   }
 

@@ -19,28 +19,10 @@ import sbt.Keys._
 import sbt._
 
 object HmrcBuild extends Build {
-  import BuildDependencies._
+
   import uk.gov.hmrc.DefaultBuildSettings._
   import uk.gov.hmrc.SbtAutoBuildPlugin
   import uk.gov.hmrc.versioning.SbtGitVersioning
-
-
-  val appDependencies = Seq(
-    play                   % "provided",
-    `simple-reactivemongo`,
-    `metrics-play`         % "provided",
-    metrics                % "provided",
-    mongoLock,
-    metrix,
-
-    scalaTest   % "test",
-    pegdown     % "test",
-    scalacheck  % "test",
-    `play-test` % "test",
-    `reactivemongo-test` % "test",
-    hmrcTest
-  )
-
 
   val appName = "work-item-repo"
 
@@ -50,11 +32,19 @@ object HmrcBuild extends Build {
     .settings(defaultSettings(): _*)
     .settings(
       targetJvm := "jvm-1.8",
-      libraryDependencies ++= appDependencies,
+      libraryDependencies ++= Seq(
+        "com.typesafe.play" %% "play"                 % PlayVersion.current % "provided",
+        "uk.gov.hmrc"       %% "simple-reactivemongo" % "5.1.0",
+        "uk.gov.hmrc"       %% "mongo-lock"           % "4.0.0",
+        "uk.gov.hmrc"       %% "metrix"               % "1.0.0",
+        "org.scalatest"     %% "scalatest"            % "2.2.6"             % "test",
+        "org.pegdown"       % "pegdown"               % "1.6.0"             % "test",
+        "com.typesafe.play" %% "play-test"            % PlayVersion.current % "test",
+        "uk.gov.hmrc"       %% "reactivemongo-test"   % "2.0.0"             % "test",
+        "uk.gov.hmrc"       %% "hmrctest"             % "2.1.0"             % "test"
+      ),
       Collaborators(),
-      crossScalaVersions := Seq("2.11.7", "2.10.4")
-    )
-    .settings(
+      crossScalaVersions := Seq("2.11.7", "2.10.4"),
       resolvers := Seq(
         Resolver.bintrayRepo("hmrc", "releases"),
         Resolver.typesafeRepo("releases")
@@ -62,21 +52,6 @@ object HmrcBuild extends Build {
     )
 }
 
-private object BuildDependencies {
-  val scalaTest              = "org.scalatest" %% "scalatest" % "2.2.0"
-  val pegdown                = "org.pegdown" % "pegdown" % "1.4.2" cross CrossVersion.Disabled
-  val scalacheck             = "org.scalacheck" %% "scalacheck" % "1.11.4"
-  val play                   = "com.typesafe.play" %% "play" % PlayVersion.current
-  val `play-test`            = "com.typesafe.play" %% "play-test" % PlayVersion.current
-  val `simple-reactivemongo` = "uk.gov.hmrc" %% "simple-reactivemongo" % "4.8.0"
-  val `reactivemongo-test`   = "uk.gov.hmrc" %% "reactivemongo-test" % "1.6.0"
-
-  val `metrics-play`         = "com.kenshoo" %% "metrics-play" % "2.3.0_0.1.8"
-  val metrics                = "com.codahale.metrics" % "metrics-graphite" % "3.0.2"
-  val hmrcTest               = "uk.gov.hmrc"  %% "hmrctest" % "1.8.0" % "test"
-  val mongoLock              = "uk.gov.hmrc"  %% "mongo-lock"              % "3.4.0"
-  val metrix                 = "uk.gov.hmrc"  %% "metrix"              % "0.4.0"
-}
 
 object Collaborators {
 

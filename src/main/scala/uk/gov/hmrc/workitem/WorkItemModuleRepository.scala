@@ -68,17 +68,16 @@ object WorkItemModuleRepository {
     override val id: String = "_id"
   }
 
-  def upsertModuleQuery(moduleName: String, time: DateTime): Seq[(String, JsValueWrapper)] = {
+  def upsertModuleQuery(moduleName: String, time: DateTime) = {
     implicit val dateWrites: Writes[DateTime] = ReactiveMongoFormats.dateTimeWrite
 
     val fieldNames = workItemFieldNames(moduleName)
-    Seq(
+    Json.obj(
       "$setOnInsert" -> Json.obj(fieldNames.availableAt -> time),
-      "$set" -> Json.obj(fieldNames.updatedAt -> time),
-      "$set" -> Json.obj(fieldNames.status -> ToDo),
-      "$set" -> Json.obj(fieldNames.failureCount -> 0)
+      "$set" -> Json.obj(fieldNames.updatedAt -> time, fieldNames.status -> ToDo, fieldNames.failureCount -> 0)
     )
   }
+
 
   def formatsOf[T](moduleName:String)(implicit trd:Reads[T]): Format[WorkItem[T]] = {
     val reads: Reads[WorkItem[T]] = (
