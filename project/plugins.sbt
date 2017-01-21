@@ -15,8 +15,9 @@
 //
 credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
 
+resolvers += Resolver.url("hmrc-sbt-plugin-releases", url("https://dl.bintray.com/hmrc/sbt-plugin-releases"))(Resolver.ivyStylePatterns)
+
 resolvers ++= Seq(
-  "hmrc-sbt-plugin-releases" at "https://dl.bintray.com/hmrc/sbt-plugin-releases",
   "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/"
 )
 
