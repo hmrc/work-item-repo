@@ -21,7 +21,7 @@ import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 import reactivemongo.api.DB
 import reactivemongo.bson._
-import reactivemongo.json.ImplicitBSONHandlers._
+import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 import scala.concurrent.{ExecutionContext, Future}

@@ -279,7 +279,7 @@ class WorkItemRepositorySpec extends WordSpec
 
       repo.markAs(insertRecord.id, Failed, availableAt = Some(timeSource.now.plusDays(2))).futureValue should be(true)
 
-      import reactivemongo.json.BSONFormats._
+      import reactivemongo.play.json.BSONFormats._
       repo.collection.db.command(
         FindAndModify(
           collection = repo.collection.name,

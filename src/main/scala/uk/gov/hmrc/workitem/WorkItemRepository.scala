@@ -23,10 +23,12 @@ import reactivemongo.api.{DB, ReadPreference}
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import reactivemongo.core.commands._
-import reactivemongo.json.BSONFormats
+import reactivemongo.play.json.BSONFormats
+import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.metrix.domain.MetricSource
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
@@ -55,7 +57,6 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
   }
 
   private implicit val dateFormats = ReactiveMongoFormats.dateTimeFormats
-  private implicit val bsonFormatter = BSONFormats.BSONDocumentFormat
 
   lazy val inProgressRetryAfter: Duration = {
     implicit val app = Play.current
@@ -110,12 +111,13 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
   def pushNew(items: Seq[T], receivedAt: DateTime, availableAt: DateTime, initialState: T => ProcessingStatus)(implicit ec: ExecutionContext): Future[Seq[WorkItem[T]]] = {
     val workItems = items.map(newWorkItem(receivedAt, availableAt, initialState))
     val stream: Stream[collection.pack.Document] = workItems.map(wi => Json.toJson(wi).as[JsObject]).toStream
-    collection.db.connection.waitForPrimary(3 seconds) flatMap { _ =>
+    // Todo: Really need to talk about whether we need this or not?
+//    collection.db.connection.waitForPrimary(3 seconds) flatMap { _ =>
       collection.bulkInsert(stream, ordered = false).map { savedCount =>
         if (savedCount.n == workItems.size) workItems
         else throw new RuntimeException(s"Only $savedCount items were saved")
       }
-    }
+//    }
   }
 
   private case class IdList(_id : BSONObjectID)
