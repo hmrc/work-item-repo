@@ -35,13 +35,13 @@ object HmrcBuild extends Build {
       libraryDependencies ++= Seq(
         // TODO: Change versions once all library dependencies are published
         "com.typesafe.play" %% "play"                 % PlayVersion.current % "provided",
-        "uk.gov.hmrc"       %% "simple-reactivemongo" % "999",
-        "uk.gov.hmrc"       %% "mongo-lock"           % "999",
+        "uk.gov.hmrc"       %% "simple-reactivemongo" % "6.0.0",
+        "uk.gov.hmrc"       %% "mongo-lock"           % "5.0.0",
         "uk.gov.hmrc"       %% "metrix"               % "1.3.0",
         "org.scalatest"     %% "scalatest"            % "2.2.6"             % "test",
         "org.pegdown"       % "pegdown"               % "1.6.0"             % "test",
         "com.typesafe.play" %% "play-test"            % PlayVersion.current % "test",
-        "uk.gov.hmrc"       %% "reactivemongo-test"   % "999"             % "test",
+        "uk.gov.hmrc"       %% "reactivemongo-test"   % "3.0.0"             % "test",
         "uk.gov.hmrc"       %% "hmrctest"             % "2.3.0"             % "test"
       ),
       Collaborators(),
