@@ -44,11 +44,11 @@ object HmrcBuild extends Build {
         "uk.gov.hmrc"       %% "hmrctest"             % "2.3.0"             % "test"
       ),
       Collaborators(),
-      crossScalaVersions := Seq("2.11.7", "2.10.4"),
       resolvers := Seq(
         Resolver.bintrayRepo("hmrc", "releases"),
         Resolver.typesafeRepo("releases")
-      )
+      ),
+      scalaVersion := "2.11.11"
     )
 }
 
