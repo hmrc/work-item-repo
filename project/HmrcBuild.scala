@@ -33,7 +33,6 @@ object HmrcBuild extends Build {
     .settings(
       targetJvm := "jvm-1.8",
       libraryDependencies ++= Seq(
-        // TODO: Change versions once all library dependencies are published
         "com.typesafe.play" %% "play"                 % PlayVersion.current % "provided",
         "uk.gov.hmrc"       %% "simple-reactivemongo" % "6.0.0",
         "uk.gov.hmrc"       %% "mongo-lock"           % "5.0.0",

@@ -111,13 +111,11 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
   def pushNew(items: Seq[T], receivedAt: DateTime, availableAt: DateTime, initialState: T => ProcessingStatus)(implicit ec: ExecutionContext): Future[Seq[WorkItem[T]]] = {
     val workItems = items.map(newWorkItem(receivedAt, availableAt, initialState))
     val stream: Stream[collection.pack.Document] = workItems.map(wi => Json.toJson(wi).as[JsObject]).toStream
-    // Todo: Really need to talk about whether we need this or not?
-//    collection.db.connection.waitForPrimary(3 seconds) flatMap { _ =>
-      collection.bulkInsert(stream, ordered = false).map { savedCount =>
-        if (savedCount.n == workItems.size) workItems
-        else throw new RuntimeException(s"Only $savedCount items were saved")
-      }
-//    }
+
+    collection.bulkInsert(stream, ordered = false).map { savedCount =>
+      if (savedCount.n == workItems.size) workItems
+      else throw new RuntimeException(s"Only $savedCount items were saved")
+    }
   }
 
   private case class IdList(_id : BSONObjectID)
