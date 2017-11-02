@@ -36,7 +36,7 @@ object HmrcBuild extends Build {
         "com.typesafe.play" %% "play"                 % PlayVersion.current % "provided",
         "uk.gov.hmrc"       %% "simple-reactivemongo" % "6.0.0",
         "uk.gov.hmrc"       %% "mongo-lock"           % "5.0.0",
-        "uk.gov.hmrc"       %% "metrix"               % "1.3.0",
+        "uk.gov.hmrc"       %% "metrix"               % "2.0.0",
         "org.scalatest"     %% "scalatest"            % "2.2.6"             % "test",
         "org.pegdown"       % "pegdown"               % "1.6.0"             % "test",
         "com.typesafe.play" %% "play-test"            % PlayVersion.current % "test",
