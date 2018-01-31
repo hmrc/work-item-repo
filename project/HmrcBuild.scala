@@ -34,7 +34,7 @@ object HmrcBuild extends Build {
       targetJvm := "jvm-1.8",
       libraryDependencies ++= Seq(
         "com.typesafe.play" %% "play"                 % PlayVersion.current % "provided",
-        "uk.gov.hmrc"       %% "simple-reactivemongo" % "6.0.0",
+        "uk.gov.hmrc"       %% "simple-reactivemongo" % "6.1.0",
         "uk.gov.hmrc"       %% "mongo-lock"           % "5.0.0",
         "uk.gov.hmrc"       %% "metrix"               % "2.0.0",
         "org.scalatest"     %% "scalatest"            % "2.2.6"             % "test",
