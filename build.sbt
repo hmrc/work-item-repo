@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import play.core.PlayVersion
 import sbt.Keys._
 import sbt._
 import uk.gov.hmrc.DefaultBuildSettings._
 import uk.gov.hmrc.SbtAutoBuildPlugin
 import uk.gov.hmrc.versioning.SbtGitVersioning
+import SbtGitVersioning.majorVersion
 
 val appName = "work-item-repo"
 
@@ -29,13 +28,13 @@ lazy val microservice = Project(appName, file("."))
   .settings(defaultSettings(): _*)
   .settings(
     targetJvm := "jvm-1.8",
+    majorVersion := 5,
     libraryDependencies ++= Seq(
       "uk.gov.hmrc"       %% "simple-reactivemongo-26" % "0.3.0",
       "uk.gov.hmrc"       %% "mongo-lock"           % "5.2.0-SNAPSHOT",
       "uk.gov.hmrc"       %% "metrix"               % "2.0.0",
       "org.scalatest"     %% "scalatest"            % "2.2.6"             % "test",
       "org.pegdown"       % "pegdown"               % "1.6.0"             % "test",
-      "com.typesafe.play" %% "play-test"            % PlayVersion.current % "test",
       "uk.gov.hmrc"       %% "reactivemongo-test"   % "3.0.0"             % "test",
       "uk.gov.hmrc"       %% "hmrctest"             % "2.3.0"             % "test"
     ),
