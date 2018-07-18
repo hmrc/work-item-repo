@@ -33,10 +33,12 @@ import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
-abstract class WorkItemRepository[T, ID](collectionName: String,
-                                         mongo: () => DB,
-                                         itemFormat: Format[WorkItem[T]]
-                                        )(implicit idFormat: Format[ID], mfItem: Manifest[T], mfID: Manifest[ID])
+abstract class WorkItemRepository[T, ID](
+  collectionName: String,
+  mongo: () => DB,
+  itemFormat: Format[WorkItem[T]],
+  inProgressRetryAfterProperty: Option[Long]
+)(implicit idFormat: Format[ID], mfItem: Manifest[T], mfID: Manifest[ID])
   extends ReactiveRepository[WorkItem[T], ID](collectionName, mongo, itemFormat, idFormat)
   with Operations.Cancel[ID]
   with Operations.FindById[ID, T]
@@ -59,11 +61,11 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
   private implicit val dateFormats = ReactiveMongoFormats.dateTimeFormats
 
   lazy val inProgressRetryAfter: Duration = {
-    implicit val app = Play.current
-    val configValue = Play.application.configuration.
-      getMilliseconds(inProgressRetryAfterProperty).
-      getOrElse(throw new IllegalStateException(s"$inProgressRetryAfterProperty config value not set"))
-    Duration.millis(configValue)
+    Duration.millis(
+      configValue.getOrElse(
+        throw new IllegalStateException(s"$inProgressRetryAfterProperty config value not set")
+      )
+    )
   }
 
   private def newWorkItem(receivedAt: DateTime, availableAt: DateTime, initialState: T => ProcessingStatus)(item: T) = WorkItem(
