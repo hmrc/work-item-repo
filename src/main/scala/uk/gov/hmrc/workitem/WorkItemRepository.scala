@@ -17,27 +17,25 @@
 package uk.gov.hmrc.workitem
 
 import org.joda.time.{DateTime, Duration}
-import play.api.Play
 import play.api.libs.json._
-import reactivemongo.api.{DB, ReadPreference}
+import reactivemongo.api.commands.Command
 import reactivemongo.api.indexes.{Index, IndexType}
+import reactivemongo.api.{BSONSerializationPack, DB, FailoverStrategy, ReadPreference}
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
-import reactivemongo.core.commands._
-import reactivemongo.play.json.BSONFormats
+import reactivemongo.core.commands.Count
 import reactivemongo.play.json.ImplicitBSONHandlers._
+
 import uk.gov.hmrc.metrix.domain.MetricSource
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
-
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
 
 abstract class WorkItemRepository[T, ID](
   collectionName: String,
   mongo: () => DB,
   itemFormat: Format[WorkItem[T]],
-  inProgressRetryAfterProperty: Option[Long]
+  configValue: Option[Long]
 )(implicit idFormat: Format[ID], mfItem: Manifest[T], mfID: Manifest[ID])
   extends ReactiveRepository[WorkItem[T], ID](collectionName, mongo, itemFormat, idFormat)
   with Operations.Cancel[ID]
@@ -133,16 +131,21 @@ abstract class WorkItemRepository[T, ID](
     id.map(_.map(getWorkItem(_))).flatMap(_.getOrElse(Future.successful(None)))
   }
 
+  val runner = Command.run(BSONSerializationPack, FailoverStrategy.default)
+
   private def findNextItemId(failedBefore: DateTime, availableBefore: DateTime)(implicit ec: ExecutionContext) : Future[Option[IdList]] = {
 
     def findNextItemIdByQuery(query: JsObject)(implicit ec: ExecutionContext): Future[Option[IdList]] = {
-      collection.db.command(
+
+      runner.apply(
+        collection,
         FindAndModify(
           collection = collection.name,
           query = query.as[BSONDocument],
           fields = Some(Json.obj(workItemFields.id -> 1).as[BSONDocument]),
           modify = Update(setStatusOperation(InProgress, None).as[BSONDocument], fetchNewObject = true)
-        )
+        ),
+        ReadPreference.Primary
       ).map(_.map(Json.toJson(_).as[IdList]))
     }
 
@@ -204,8 +207,14 @@ abstract class WorkItemRepository[T, ID](
     }
   }
 
-  def count(state: ProcessingStatus)(implicit ec: ExecutionContext): Future[Int] = collection.db.command(
-    Count(collection.name, Some(BSONDocument(workItemFields.status -> state.name))), ReadPreference.secondaryPreferred)
+  def count(state: ProcessingStatus)(implicit ec: ExecutionContext): Future[Int] = runner.apply(
+    collection,
+    Count(
+      collection.name,
+      Some(BSONDocument(workItemFields.status -> state.name))
+    ),
+    ReadPreference.secondaryPreferred
+  )
 
   private def setStatusOperation(newStatus: ProcessingStatus, availableAt: Option[DateTime]): JsObject = {
     val fields = Json.obj(

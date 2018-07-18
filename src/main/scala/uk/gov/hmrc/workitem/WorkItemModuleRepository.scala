@@ -27,10 +27,16 @@ import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import scala.concurrent.{ExecutionContext, Future}
 
 abstract class WorkItemModuleRepository[T](
-       collectionName: String,
-       moduleName: String,
-       val mongo: () => DB
-     )(implicit tmf: Manifest[T], trd: Reads[T]) extends WorkItemRepository[T, BSONObjectID](collectionName, mongo, WorkItemModuleRepository.formatsOf[T](moduleName)) {
+  collectionName: String,
+  moduleName: String,
+  val mongo: () => DB,
+  configValue: Option[Long]
+)(implicit tmf: Manifest[T], trd: Reads[T]) extends WorkItemRepository[T, BSONObjectID](
+  collectionName,
+  mongo,
+  WorkItemModuleRepository.formatsOf[T](moduleName),
+  configValue: Option[Long]
+) {
 
   def protectFromWrites = throw new IllegalStateException("The model object cannot be created via the work item module repository")
 
