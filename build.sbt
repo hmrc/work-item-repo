@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import sbt.Keys._
 import sbt._
 import uk.gov.hmrc.DefaultBuildSettings._
 import uk.gov.hmrc.SbtAutoBuildPlugin
 import uk.gov.hmrc.versioning.SbtGitVersioning
-import SbtGitVersioning.majorVersion
 
 val appName = "work-item-repo"
 
@@ -27,39 +27,20 @@ lazy val microservice = Project(appName, file("."))
   .settings(scalaSettings: _*)
   .settings(defaultSettings(): _*)
   .settings(
-    targetJvm := "jvm-1.8",
-    majorVersion := 5,
+    scalaVersion        := "2.11.12",
+    crossScalaVersions  := Seq("2.11.12", "2.12.6"),
+    targetJvm           := "jvm-1.8",
     libraryDependencies ++= Seq(
       "uk.gov.hmrc"       %% "simple-reactivemongo-26" % "0.3.0",
-      "uk.gov.hmrc"       %% "mongo-lock"           % "5.2.0-SNAPSHOT",
-      "uk.gov.hmrc"       %% "metrix"               % "2.0.0",
-      "org.scalatest"     %% "scalatest"            % "2.2.6"             % "test",
-      "org.pegdown"       % "pegdown"               % "1.6.0"             % "test",
-      "uk.gov.hmrc"       %% "reactivemongo-test"   % "3.0.0"             % "test",
-      "uk.gov.hmrc"       %% "hmrctest"             % "2.3.0"             % "test"
+      "uk.gov.hmrc"       %% "mongo-lock"              % "5.2.0-SNAPSHOT",
+      "uk.gov.hmrc"       %% "metrix"                  % "2.0.0-0-g0000000",
+      "org.scalatest"     %% "scalatest"               % "2.2.6"             % Test,
+      "org.pegdown"       % "pegdown"                  % "1.6.0"             % Test,
+      "uk.gov.hmrc"       %% "reactivemongo-test"      % "3.0.0"             % Test,
+      "uk.gov.hmrc"       %% "hmrctest"                % "2.3.0"             % Test
     ),
-    pomExtra := (<url>https://www.gov.uk/government/organisations/hm-revenue-customs</url>
-      <licenses>
-        <license>
-          <name>Apache 2</name>
-          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-        </license>
-      </licenses>
-      <scm>
-        <connection>scm:git@github.com:hmrc/work-item-repo.git</connection>
-        <developerConnection>scm:git@github.com:hmrc/work-item-repo.git</developerConnection>
-        <url>git@github.com:hmrc/work-item-repo.git</url>
-      </scm>
-      <developers>
-        <developer>
-          <id>githubmo</id>
-          <name>Mohammed Abdulrazeg</name>
-          <url>http://www.equalexperts.com</url>
-        </developer>
-      </developers>),
     resolvers := Seq(
       Resolver.bintrayRepo("hmrc", "releases"),
       Resolver.typesafeRepo("releases")
-    ),
-    scalaVersion := "2.11.11"
+    )
   )
