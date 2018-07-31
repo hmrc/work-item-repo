@@ -33,7 +33,7 @@ lazy val microservice = Project(appName, file("."))
     libraryDependencies ++= Seq(
       "uk.gov.hmrc"       %% "simple-reactivemongo-26" % "0.3.0",
       "uk.gov.hmrc"       %% "mongo-lock"              % "5.2.0-SNAPSHOT",
-      "uk.gov.hmrc"       %% "metrix"                  % "2.0.0-0-g0000000",
+      "uk.gov.hmrc"       %% "metrix"                  % "2.0.0-3-g48b8866",
       "org.scalatest"     %% "scalatest"               % "2.2.6"             % Test,
       "org.pegdown"       % "pegdown"                  % "1.6.0"             % Test,
       "uk.gov.hmrc"       %% "reactivemongo-test"      % "3.0.0"             % Test,
