@@ -18,15 +18,16 @@ package uk.gov.hmrc.workitem
 
 import org.joda.time.{DateTime, Duration}
 import play.api.libs.json._
-import reactivemongo.api.commands.{Command, ResolvedCollectionCommand}
+import reactivemongo.api.collections.bson.BSONBatchCommands.CountCommand._
+import reactivemongo.api.commands.bson.BSONCountCommandImplicits._
 import reactivemongo.api.commands.bson.BSONFindAndModifyCommand
+import reactivemongo.api.commands.bson.BSONFindAndModifyCommand._
+import reactivemongo.api.commands.bson.BSONFindAndModifyImplicits._
+import reactivemongo.api.commands.{Command, ResolvedCollectionCommand}
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.api.{BSONSerializationPack, DB, FailoverStrategy, ReadPreference}
 import reactivemongo.bson.{BSONDocument, BSONDocumentWriter, BSONObjectID}
 import reactivemongo.play.json.ImplicitBSONHandlers._
-import reactivemongo.api.commands.bson.BSONFindAndModifyCommand._
-import reactivemongo.api.commands.bson.BSONFindAndModifyImplicits._
-import reactivemongo.api.collections.bson.BSONBatchCommands.CountCommand._
 import uk.gov.hmrc.metrix.domain.MetricSource
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
