@@ -53,7 +53,12 @@ trait WithWorkItemRepositoryModule
   this: Suite =>
 
   implicit val eif = uk.gov.hmrc.workitem.ExampleItemWithModule.formats
-  lazy val repo = new WorkItemModuleRepository[ExampleItemWithModule]("items", "testModule", mongo) {
+  lazy val repo = new WorkItemModuleRepository[ExampleItemWithModule](
+    "items",
+    "testModule",
+    mongo,
+    None
+  ) {
     override val inProgressRetryAfterProperty: String = "test-config"
     override lazy val inProgressRetryAfter: Duration = Duration.standardHours(1)
 
@@ -74,9 +79,11 @@ trait WithWorkItemRepository
 
   def exampleItemRepository(collectionName: String) =
     new WorkItemRepository[ExampleItem, BSONObjectID](
-    collectionName = collectionName,
-    mongo = mongo,
-    itemFormat = WorkItem.workItemMongoFormat[ExampleItem]) {
+      collectionName = collectionName,
+      mongo = mongo,
+      itemFormat = WorkItem.workItemMongoFormat[ExampleItem],
+      configValue = None
+    ) {
 
     override lazy val inProgressRetryAfter: Duration = Duration.standardHours(1)
 

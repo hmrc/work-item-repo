@@ -22,6 +22,12 @@ import uk.gov.hmrc.versioning.SbtGitVersioning
 
 val appName = "work-item-repo"
 
+scalacOptions in ThisBuild ++= Seq(
+  "-feature",
+  "-deprecation",
+  "-language:reflectiveCalls"
+)
+
 lazy val microservice = Project(appName, file("."))
   .enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning)
   .settings(scalaSettings: _*)

@@ -16,11 +16,15 @@
 
 package uk.gov.hmrc.workitem
 
-import org.scalatest.{Entry, LoneElement, Matchers, WordSpec}
+import org.scalatest.{LoneElement, Matchers, WordSpec}
 import play.api.libs.json.Json
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
-import reactivemongo.core.commands.{FindAndModify, Update}
+import reactivemongo.api.commands.ResolvedCollectionCommand
+import reactivemongo.api.commands.bson.BSONFindAndModifyCommand
+import reactivemongo.api.{BSONSerializationPack, ReadPreference}
+import reactivemongo.bson.{BSONDocument, BSONDocumentWriter, BSONObjectID}
 import uk.gov.hmrc.time.DateTimeUtils
+import reactivemongo.api.commands.bson.BSONFindAndModifyCommand._
+import reactivemongo.api.commands.bson.BSONFindAndModifyImplicits._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -273,6 +277,10 @@ class WorkItemRepositorySpec extends WordSpec
       )
     }
 
+    implicit val writer: BSONDocumentWriter[ResolvedCollectionCommand[FindAndModify]] =
+      BSONSerializationPack.writer[ResolvedCollectionCommand[FindAndModify]] { BSONFindAndModifyCommand.serialize(_) }
+
+
     "pull an item marked as Failed without an 'availableAt' field" in {
 
       val insertRecord: WorkItem[ExampleItem] = repo.pushNew(item1, timeSource.now).futureValue
@@ -280,13 +288,16 @@ class WorkItemRepositorySpec extends WordSpec
       repo.markAs(insertRecord.id, Failed, availableAt = Some(timeSource.now.plusDays(2))).futureValue should be(true)
 
       import reactivemongo.play.json.BSONFormats._
-      repo.collection.db.command(
+      repo.runner(
+        repo.collection,
         FindAndModify(
-          collection = repo.collection.name,
           query = Json.obj("_id" -> insertRecord.id).as[BSONDocument],
-          modify = Update(BSONDocument("$unset" -> BSONDocument("availableAt" -> "")), fetchNewObject = true)
-        )
-      ).map(_.map(Json.toJson(_))).futureValue
+          modify = Update(BSONDocument("$unset" -> BSONDocument("availableAt" -> "")), fetchNewObject = true),
+          sort = None,
+          fields = None
+        ),
+        ReadPreference.Primary
+      ).map(_.value.map(Json.toJson(_))).futureValue
 
       repo.pullOutstanding(failedBefore = timeSource.now.plusDays(1), availableBefore = timeSource.now.plusDays(3)).futureValue.get should have(
         'item (item1),
