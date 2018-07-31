@@ -23,11 +23,10 @@ import reactivemongo.api.commands.bson.BSONFindAndModifyCommand
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.api.{BSONSerializationPack, DB, FailoverStrategy, ReadPreference}
 import reactivemongo.bson.{BSONDocument, BSONDocumentWriter, BSONObjectID}
-import reactivemongo.play.json.collection.JSONBatchCommands.JSONCountCommand._
 import reactivemongo.play.json.ImplicitBSONHandlers._
 import reactivemongo.api.commands.bson.BSONFindAndModifyCommand._
 import reactivemongo.api.commands.bson.BSONFindAndModifyImplicits._
-import reactivemongo.play.json.collection.JSONBatchCommands.JSONCountCommand
+import reactivemongo.api.collections.bson.BSONBatchCommands.CountCommand._
 import uk.gov.hmrc.metrix.domain.MetricSource
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
@@ -131,16 +130,13 @@ abstract class WorkItemRepository[T, ID](
       document.map(_.map(Json.toJson(_).as[WorkItem[T]]))
     }
     val id = findNextItemId(failedBefore,availableBefore)
-    id.map(_.map(getWorkItem(_))).flatMap(_.getOrElse(Future.successful(None)))
+    id.map(_.map(getWorkItem)).flatMap(_.getOrElse(Future.successful(None)))
   }
 
   val runner = Command.run(BSONSerializationPack, FailoverStrategy.default)
 
   implicit val findAndModifyWriter: BSONDocumentWriter[ResolvedCollectionCommand[FindAndModify]] =
     BSONSerializationPack.writer[ResolvedCollectionCommand[FindAndModify]] { BSONFindAndModifyCommand.serialize(_) }
-
-  implicit val countWriter: BSONDocumentWriter[ResolvedCollectionCommand[JSONCountCommand.Count]] =
-    BSONSerializationPack.writer[ResolvedCollectionCommand[JSONCountCommand.Count]] { JSONCountCommand.serialize(_) }
 
 //  implicit val countReader: BSONDocumentWriter[ResolvedCollectionCommand[JSONCountCommand.Count]] =
 //    BSONSerializationPack.writer[ResolvedCollectionCommand[JSONCountCommand.Count]] { BSONFindAndModifyCommand.serialize(_) }
@@ -220,14 +216,15 @@ abstract class WorkItemRepository[T, ID](
     }
   }
 
-  def count(state: ProcessingStatus)(implicit ec: ExecutionContext): Future[Int] =
+  def count(state: ProcessingStatus)(implicit ec: ExecutionContext): Future[Int] = {
     runner(
-    collection,
-    Count(
-      BSONDocument(workItemFields.status -> state.name)
-    ),
-    ReadPreference.secondaryPreferred
-  )
+      collection,
+      Count(
+        BSONDocument(workItemFields.status -> state.name)
+      ),
+      ReadPreference.secondaryPreferred
+    ).map(_.count)
+  }
 
   private def setStatusOperation(newStatus: ProcessingStatus, availableAt: Option[DateTime]): JsObject = {
     val fields = Json.obj(

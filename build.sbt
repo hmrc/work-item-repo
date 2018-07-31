@@ -31,7 +31,7 @@ lazy val microservice = Project(appName, file("."))
     crossScalaVersions  := Seq("2.11.12", "2.12.6"),
     targetJvm           := "jvm-1.8",
     libraryDependencies ++= Seq(
-      "uk.gov.hmrc"       %% "simple-reactivemongo-26" % "0.3.0",
+      "uk.gov.hmrc"       %% "simple-reactivemongo-26" % "0.5.0",
       "uk.gov.hmrc"       %% "mongo-lock"              % "5.2.0-SNAPSHOT",
       "uk.gov.hmrc"       %% "metrix"                  % "2.0.0-3-g48b8866",
       "org.scalatest"     %% "scalatest"               % "2.2.6"             % Test,
