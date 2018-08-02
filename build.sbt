@@ -28,7 +28,7 @@ scalacOptions in ThisBuild ++= Seq(
   "-language:reflectiveCalls"
 )
 
-lazy val microservice = Project(appName, file("."))
+lazy val root = Project(appName, file("."))
   .enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning)
   .settings(scalaSettings: _*)
   .settings(defaultSettings(): _*)
@@ -37,12 +37,10 @@ lazy val microservice = Project(appName, file("."))
     crossScalaVersions  := Seq("2.11.12", "2.12.6"),
     targetJvm           := "jvm-1.8",
     libraryDependencies ++= Seq(
-      "uk.gov.hmrc"       %% "simple-reactivemongo-26" % "0.5.0",
-      "uk.gov.hmrc"       %% "mongo-lock"              % "5.2.0-SNAPSHOT",
-      "uk.gov.hmrc"       %% "metrix"                  % "2.0.0-3-g48b8866",
+      "uk.gov.hmrc"       %% "metrix-26"               % "0.3.0",
       "org.scalatest"     %% "scalatest"               % "2.2.6"             % Test,
       "org.pegdown"       % "pegdown"                  % "1.6.0"             % Test,
-      "uk.gov.hmrc"       %% "reactivemongo-test"      % "3.0.0"             % Test,
+      "uk.gov.hmrc"       %% "reactivemongo-test-26"   % "0.3.0"             % Test,
       "uk.gov.hmrc"       %% "hmrctest"                % "2.3.0"             % Test
     ),
     resolvers := Seq(

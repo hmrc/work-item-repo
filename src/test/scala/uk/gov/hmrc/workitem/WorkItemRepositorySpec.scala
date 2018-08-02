@@ -277,10 +277,6 @@ class WorkItemRepositorySpec extends WordSpec
       )
     }
 
-    implicit val writer: BSONDocumentWriter[ResolvedCollectionCommand[FindAndModify]] =
-      BSONSerializationPack.writer[ResolvedCollectionCommand[FindAndModify]] { BSONFindAndModifyCommand.serialize(_) }
-
-
     "pull an item marked as Failed without an 'availableAt' field" in {
 
       val insertRecord: WorkItem[ExampleItem] = repo.pushNew(item1, timeSource.now).futureValue
@@ -288,16 +284,12 @@ class WorkItemRepositorySpec extends WordSpec
       repo.markAs(insertRecord.id, Failed, availableAt = Some(timeSource.now.plusDays(2))).futureValue should be(true)
 
       import reactivemongo.play.json.BSONFormats._
-      repo.runner(
-        repo.collection,
-        FindAndModify(
-          query = Json.obj("_id" -> insertRecord.id).as[BSONDocument],
-          modify = Update(BSONDocument("$unset" -> BSONDocument("availableAt" -> "")), fetchNewObject = true),
-          sort = None,
-          fields = None
-        ),
-        ReadPreference.Primary
-      ).map(_.value.map(Json.toJson(_))).futureValue
+
+      repo.findAndUpdate(
+        query = Json.obj("_id" -> insertRecord.id),
+        update = Json.obj("$unset" -> Json.obj("availableAt" -> "")),
+        fetchNewObject = true
+      ).futureValue
 
       repo.pullOutstanding(failedBefore = timeSource.now.plusDays(1), availableBefore = timeSource.now.plusDays(3)).futureValue.get should have(
         'item (item1),
