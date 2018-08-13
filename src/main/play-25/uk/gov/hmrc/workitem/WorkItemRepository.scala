@@ -38,9 +38,9 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
                                          itemFormat: Format[WorkItem[T]]
                                         )(implicit idFormat: Format[ID], mfItem: Manifest[T], mfID: Manifest[ID])
   extends ReactiveRepository[WorkItem[T], ID](collectionName, mongo, itemFormat, idFormat)
-  with Operations.Cancel[ID]
-  with Operations.FindById[ID, T]
-  with MetricSource {
+    with Operations.Cancel[ID]
+    with Operations.FindById[ID, T]
+    with MetricSource {
 
   def now: DateTime
 

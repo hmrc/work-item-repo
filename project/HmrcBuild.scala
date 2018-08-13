@@ -26,29 +26,53 @@ object HmrcBuild extends Build {
 
   val appName = "work-item-repo"
 
+  var playSuffix = "play-26"
+
+  var dependencies_play25 = Seq(
+    "uk.gov.hmrc"       %% "simple-reactivemongo" % "6.1.0",
+    "uk.gov.hmrc"       %% "mongo-lock"           % "5.0.0",
+    "uk.gov.hmrc"       %% "metrix"               % "2.0.0",
+    "org.scalatest"     %% "scalatest"            % "2.2.6"             % "test",
+    "org.pegdown"       % "pegdown"               % "1.6.0"             % "test",
+    "com.typesafe.play" %% "play-test"            % PlayVersion.current % "test",
+    "uk.gov.hmrc"       %% "reactivemongo-test"   % "3.0.0"             % "test",
+    "uk.gov.hmrc"       %% "hmrctest"             % "2.3.0"             % "test"
+  )
+
+  var dependencies_play26 = Seq(
+    "uk.gov.hmrc"       %% "simple-reactivemongo-26"    % "0.8.0",
+    "com.typesafe"      % "config"                      % "1.3.3",
+    "uk.gov.hmrc"       %% "mongo-lock-26"              % "0.2.0",
+    "uk.gov.hmrc"       %% "metrix-26"                  % "0.3.0",
+    "org.scalatest"     %% "scalatest"                  % "2.2.6"  % Test,
+    "org.pegdown"       % "pegdown"                     % "1.6.0"  % Test,
+    "uk.gov.hmrc"       %% "reactivemongo-test-26"      % "0.3.0"  % Test,
+    "uk.gov.hmrc"       %% "hmrctest"                   % "2.3.0"  % Test
+  )
+
+
+
   lazy val microservice = Project(appName, file("."))
     .enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning)
     .settings(scalaSettings: _*)
     .settings(defaultSettings(): _*)
     .settings(
       targetJvm := "jvm-1.8",
-      libraryDependencies ++= Seq(
-        "com.typesafe.play" %% "play"                 % PlayVersion.current % "provided",
-        "uk.gov.hmrc"       %% "simple-reactivemongo" % "6.1.0",
-        "uk.gov.hmrc"       %% "mongo-lock"           % "5.0.0",
-        "uk.gov.hmrc"       %% "metrix"               % "2.0.0",
-        "org.scalatest"     %% "scalatest"            % "2.2.6"             % "test",
-        "org.pegdown"       % "pegdown"               % "1.6.0"             % "test",
-        "com.typesafe.play" %% "play-test"            % PlayVersion.current % "test",
-        "uk.gov.hmrc"       %% "reactivemongo-test"   % "3.0.0"             % "test",
-        "uk.gov.hmrc"       %% "hmrctest"             % "2.3.0"             % "test"
-      ),
+      libraryDependencies ++= dependencies_play25,
       Collaborators(),
       resolvers := Seq(
         Resolver.bintrayRepo("hmrc", "releases"),
         Resolver.typesafeRepo("releases")
       ),
       scalaVersion := "2.11.11"
+    )
+    .settings(
+      unmanagedSourceDirectories in Compile += {
+        (sourceDirectory in Compile).value / playSuffix
+      },
+      unmanagedSourceDirectories in Test += {
+        (sourceDirectory in Test).value / playSuffix
+      }
     )
 }
 
