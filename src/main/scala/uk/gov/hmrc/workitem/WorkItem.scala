@@ -21,7 +21,7 @@ import org.joda.time.format.ISODateTimeFormat
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import scala.util.{Success => TrySuccess, Failure => TryFailure}
 
 import scala.util.Try
 
@@ -63,14 +63,19 @@ object WorkItem {
     }
 
     implicit val bsonIdFormat: Format[BSONObjectID] = Format(
-      Reads.StringReads.map(BSONObjectID.apply),
+      Reads.StringReads.map(stringObjectId => BSONObjectID.parse(stringObjectId) match {
+        case TrySuccess(bsonObjectID) => bsonObjectID
+        case TryFailure(exception)    => throw new RuntimeException(s"'$stringObjectId' is not a valid BSONObjectID: $exception")
+      }),
       Writes(id => JsString(id.stringify))
     )
 
     workItemFormat[T]
   }
 
-  def workItemFormat[T](implicit bsonIdFormat: Format[BSONObjectID], dateTimeFormat: Format[DateTime], tFormat: Format[T]) = {
+  def workItemFormat[T](implicit bsonIdFormat: Format[BSONObjectID],
+                        dateTimeFormat: Format[DateTime],
+                        tFormat: Format[T]): Format[WorkItem[T]] = {
     val reads = (
       (__ \ "id").read[BSONObjectID] and
       (__ \ "receivedAt").read[DateTime] and
