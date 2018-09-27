@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.workitem
 
+import com.typesafe.config.Config
 import org.joda.time.DateTime
-import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 import reactivemongo.api.DB
 import reactivemongo.bson._
@@ -26,11 +26,17 @@ import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 import scala.concurrent.{ExecutionContext, Future}
 
-abstract class WorkItemModuleRepository[T](
-       collectionName: String,
-       moduleName: String,
-       val mongo: () => DB
-     )(implicit tmf: Manifest[T], trd: Reads[T]) extends WorkItemRepository[T, BSONObjectID](collectionName, mongo, WorkItemModuleRepository.formatsOf[T](moduleName)) {
+abstract class WorkItemModuleRepository[T](collectionName: String,
+                                           moduleName: String,
+                                           mongo: () => DB,
+                                           config: Config
+                                          )(implicit tmf: Manifest[T], trd: Reads[T])
+  extends WorkItemRepository[T, BSONObjectID](
+    collectionName,
+    mongo,
+    WorkItemModuleRepository.formatsOf[T](moduleName),
+    config
+  ) {
 
   def protectFromWrites = throw new IllegalStateException("The model object cannot be created via the work item module repository")
 
@@ -44,7 +50,7 @@ abstract class WorkItemModuleRepository[T](
 
   override lazy val workItemFields: WorkItemFieldNames = WorkItemModuleRepository.workItemFieldNames(moduleName)
 
-  override lazy val metricPrefix = moduleName
+  override lazy val metricPrefix: String = moduleName
 
 }
 

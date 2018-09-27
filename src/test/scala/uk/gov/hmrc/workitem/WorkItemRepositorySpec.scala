@@ -16,10 +16,9 @@
 
 package uk.gov.hmrc.workitem
 
-import org.scalatest.{Entry, LoneElement, Matchers, WordSpec}
+import org.scalatest.{LoneElement, Matchers, WordSpec}
 import play.api.libs.json.Json
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
-import reactivemongo.core.commands.{FindAndModify, Update}
+import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.time.DateTimeUtils
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -280,13 +279,12 @@ class WorkItemRepositorySpec extends WordSpec
       repo.markAs(insertRecord.id, Failed, availableAt = Some(timeSource.now.plusDays(2))).futureValue should be(true)
 
       import reactivemongo.play.json.BSONFormats._
-      repo.collection.db.command(
-        FindAndModify(
-          collection = repo.collection.name,
-          query = Json.obj("_id" -> insertRecord.id).as[BSONDocument],
-          modify = Update(BSONDocument("$unset" -> BSONDocument("availableAt" -> "")), fetchNewObject = true)
-        )
-      ).map(_.map(Json.toJson(_))).futureValue
+
+      repo.findAndUpdate(
+        query = Json.obj("_id" -> insertRecord.id),
+        update = Json.obj("$unset" -> Json.obj("availableAt" -> "")),
+        fetchNewObject = true
+      ).futureValue
 
       repo.pullOutstanding(failedBefore = timeSource.now.plusDays(1), availableBefore = timeSource.now.plusDays(3)).futureValue.get should have(
         'item (item1),
