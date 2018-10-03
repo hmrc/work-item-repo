@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.workitem
 
+import com.typesafe.config.ConfigFactory
 import org.joda.time.chrono.ISOChronology
 import org.joda.time.{DateTime, Duration, LocalDate}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
@@ -52,9 +53,16 @@ trait WithWorkItemRepositoryModule
   with TimeSource {
   this: Suite =>
 
+  val appConf = ConfigFactory.load("application.test.conf")
+
   implicit val eif = uk.gov.hmrc.workitem.ExampleItemWithModule.formats
-  lazy val repo = new WorkItemModuleRepository[ExampleItemWithModule]("items", "testModule", mongo) {
-    override val inProgressRetryAfterProperty: String = "test-config"
+  lazy val repo = new WorkItemModuleRepository[ExampleItemWithModule](
+    "items",
+    "testModule",
+    mongo,
+    appConf
+  ) {
+    override val inProgressRetryAfterProperty: String = "retryAfterSeconds"
     override lazy val inProgressRetryAfter: Duration = Duration.standardHours(1)
 
     override def now: DateTime = timeSource.now
@@ -72,15 +80,19 @@ trait WithWorkItemRepository
   import uk.gov.hmrc.mongo.json.ReactiveMongoFormats.objectIdFormats
   implicit val eif = uk.gov.hmrc.workitem.ExampleItem.formats
 
+  val appConf = ConfigFactory.load("application.test.conf")
+
   def exampleItemRepository(collectionName: String) =
     new WorkItemRepository[ExampleItem, BSONObjectID](
-    collectionName = collectionName,
-    mongo = mongo,
-    itemFormat = WorkItem.workItemMongoFormat[ExampleItem]) {
+      collectionName = collectionName,
+      mongo = mongo,
+      itemFormat = WorkItem.workItemMongoFormat[ExampleItem],
+      appConf
+    ) {
 
     override lazy val inProgressRetryAfter: Duration = Duration.standardHours(1)
 
-    def inProgressRetryAfterProperty: String = ???
+    def inProgressRetryAfterProperty: String = "retryAfterSeconds"
 
     def now: DateTime = timeSource.now
 
@@ -96,7 +108,6 @@ trait WithWorkItemRepository
 
   val collectionName = "items"
   lazy val repo = exampleItemRepository(collectionName)
-
 
   protected override def beforeEach() {
     import scala.concurrent.ExecutionContext.Implicits.global
