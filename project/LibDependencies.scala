@@ -30,15 +30,15 @@ object LibDependencies {
     play25 = Seq(
       "com.typesafe.play"     %% "play"                 % play25Version,
       "de.threedimensions"    %% "metrics-play"         % "2.5.13",
-      "uk.gov.hmrc"           %% "metrix"               % "3.0.0-play-25",
-      "uk.gov.hmrc"           %% "mongo-lock"           % "6.0.0-play-25",
+      "uk.gov.hmrc"           %% "metrix"               % "3.1.0-play-25",
+      "uk.gov.hmrc"           %% "mongo-lock"           % "6.1.0-play-25",
       "uk.gov.hmrc"           %% "simple-reactivemongo" % "7.0.0-play-25"
     ),
     play26 = Seq(
       "com.kenshoo"           %% "metrics-play"         % "2.6.6_0.6.2",
       "com.typesafe.play"     %% "play"                 % play26Version,
-      "uk.gov.hmrc"           %% "metrix"               % "3.0.0-play-26",
-      "uk.gov.hmrc"           %% "mongo-lock"           % "6.0.0-play-26",
+      "uk.gov.hmrc"           %% "metrix"               % "3.1.0-play-26",
+      "uk.gov.hmrc"           %% "mongo-lock"           % "6.1.0-play-26",
       "uk.gov.hmrc"           %% "simple-reactivemongo" % "7.0.0-play-26"
     )
   )
