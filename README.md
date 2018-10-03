@@ -15,7 +15,7 @@ resolvers += Resolver.bintrayRepo("hmrc", "releases")
 libraryDependencies += "uk.gov.hmrc" %% "work-item-repo" % "[INSERT-VERSION]"
 ```
 ## Compatibility
-work-item-repo since version 6.0.0 uses the latest ReactiveMongo (https://github.com/ReactiveMongo/ReactiveMongo) instead of HMRC fork of it (https://github.com/hmrc/ReactiveMongo). Please review your dependencies if you upgrade. In particular you should no longer use https://github.com/hmrc/ReactiveMongo in your microservice. 
+work-item-repo since version 6.0.0 uses the latest ReactiveMongo (https://github.com/ReactiveMongo/ReactiveMongo) instead of HMRC fork of it (https://github.com/hmrc/ReactiveMongo). Please review your dependencies if you upgrade. In particular you should no longer use https://github.com/hmrc/Play-ReactiveMongo/ in your microservice. 
 
 ### License
 
