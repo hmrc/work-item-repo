@@ -121,8 +121,7 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
     def getWorkItem(idList: IdList): Future[Option[WorkItem[T]]] = {
       import ReactiveMongoFormats.objectIdWrite
       collection.find(
-        selector = Json.obj(workItemFields.id -> idList._id),
-        projection = None
+        selector = Json.obj(workItemFields.id -> idList._id)
       ).one[WorkItem[T]]
     }
 
