@@ -20,7 +20,7 @@ object LibDependencies {
 
   def apply(): Seq[ModuleID] = compile ++ test
 
-  private val play25Version = "2.5.12"
+  private val play25Version = "2.5.19"
   private val play26Version = "2.6.20"
 
   private val compile: Seq[ModuleID] = PlayCrossCompilation.dependencies(
@@ -30,16 +30,12 @@ object LibDependencies {
     play25 = Seq(
       "com.typesafe.play"     %% "play"                 % play25Version,
       "de.threedimensions"    %% "metrics-play"         % "2.5.13",
-      "uk.gov.hmrc"           %% "metrix"               % "3.4.0-play-25",
-      "uk.gov.hmrc"           %% "mongo-lock"           % "6.4.0-play-25",
-      "uk.gov.hmrc"           %% "simple-reactivemongo" % "7.6.0-play-25"
+      "uk.gov.hmrc"           %% "metrix"               % "3.5.0-play-25"
     ),
     play26 = Seq(
       "com.kenshoo"           %% "metrics-play"         % "2.6.6_0.6.2",
       "com.typesafe.play"     %% "play"                 % play26Version,
-      "uk.gov.hmrc"           %% "metrix"               % "3.4.0-play-26",
-      "uk.gov.hmrc"           %% "mongo-lock"           % "6.4.0-play-26",
-      "uk.gov.hmrc"           %% "simple-reactivemongo" % "7.6.0-play-26"
+      "uk.gov.hmrc"           %% "metrix"               % "3.5.0-play-26"
     )
   )
 
@@ -51,11 +47,11 @@ object LibDependencies {
     ),
     play25 = Seq(
       "com.typesafe.play" %% "play-test"          % play25Version   % Test,
-      "uk.gov.hmrc"       %% "reactivemongo-test" % "4.4.0-play-25" % Test
+      "uk.gov.hmrc"       %% "reactivemongo-test" % "4.6.0-play-25" % Test
     ),
     play26 = Seq(
       "com.typesafe.play" %% "play-test"          % play26Version   % Test,
-      "uk.gov.hmrc"       %% "reactivemongo-test" % "4.4.0-play-26" % Test
+      "uk.gov.hmrc"       %% "reactivemongo-test" % "4.6.0-play-26" % Test
     )
   )
 }
