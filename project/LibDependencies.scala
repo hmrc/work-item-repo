@@ -29,29 +29,30 @@ object LibDependencies {
     ),
     play25 = Seq(
       "com.typesafe.play"     %% "play"                 % play25Version,
-      "com.kenshoo"           %% "metrics-play"         % "2.7.0_0.8.0",
-      "uk.gov.hmrc"           %% "metrix"               % "3.7.0-play-25"
+      "com.kenshoo"           %% "metrics-play"         % "2.5.9_0.5.1",
+      "uk.gov.hmrc"           %% "metrix"               % "3.8.0-play-25"
     ),
     play26 = Seq(
-      "com.kenshoo"           %% "metrics-play"         % "2.7.0_0.8.0",
       "com.typesafe.play"     %% "play"                 % play26Version,
-      "uk.gov.hmrc"           %% "metrix"               % "3.7.0-play-26"
+      "com.kenshoo"           %% "metrics-play"         % "2.7.0_0.8.0",
+      "uk.gov.hmrc"           %% "metrix"               % "3.8.0-play-26"
     )
   )
 
   private val test: Seq[ModuleID] = PlayCrossCompilation.dependencies(
     shared = Seq(
-      "org.pegdown"    % "pegdown"     % "1.6.0"  % Test,
-      "org.scalatest"  %% "scalatest"  % "3.0.5"  % Test,
-      "uk.gov.hmrc"    %% "hmrctest"   % "2.3.0"  % Test
+      "org.pegdown"    % "pegdown"     % "1.6.0"          % Test,
+      "org.scalatest"  %% "scalatest"  % "3.0.5"          % Test
     ),
     play25 = Seq(
-      "com.typesafe.play" %% "play-test"          % play25Version   % Test,
-      "uk.gov.hmrc"       %% "reactivemongo-test" % "4.15.0-play-25" % Test
+      "com.typesafe.play" %% "play-test"          % play25Version     % Test,
+      "uk.gov.hmrc"       %% "reactivemongo-test" % "4.15.0-play-25"  % Test,
+      "uk.gov.hmrc"       %% "hmrctest"           % "3.9.0-play-25"   % Test
     ),
     play26 = Seq(
-      "com.typesafe.play" %% "play-test"          % play26Version   % Test,
-      "uk.gov.hmrc"       %% "reactivemongo-test" % "4.15.0-play-26" % Test
+      "com.typesafe.play" %% "play-test"          % play26Version     % Test,
+      "uk.gov.hmrc"       %% "reactivemongo-test" % "4.15.0-play-26"  % Test,
+      "uk.gov.hmrc"       %% "hmrctest"           % "3.9.0-play-26"   % Test
     )
   )
 }
