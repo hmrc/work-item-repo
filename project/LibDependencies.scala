@@ -34,7 +34,7 @@ object LibDependencies {
     ),
     play26 = Seq(
       "com.typesafe.play"     %% "play"                 % play26Version,
-      "com.kenshoo"           %% "metrics-play"         % "2.7.0_0.8.0",
+      "com.kenshoo"           %% "metrics-play"         % "2.6.19_0.7.0",
       "uk.gov.hmrc"           %% "metrix"               % "3.11.0-play-26"
     )
   )
