@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.joda.time.{DateTime, Duration}
 import play.api.libs.json._
 import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.api.{DB, ReadPreference}
+import reactivemongo.api.{DB, ReadPreference, WriteConcern}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.ImplicitBSONHandlers.JsObjectDocumentWriter
 import uk.gov.hmrc.metrix.domain.MetricSource
@@ -133,11 +133,18 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
   private def findNextItemId(failedBefore: DateTime, availableBefore: DateTime)(implicit ec: ExecutionContext) : Future[Option[IdList]] = {
 
     def findNextItemIdByQuery(query: JsObject)(implicit ec: ExecutionContext): Future[Option[IdList]] =
-      findAndUpdate(
-        query = query,
+      collection.findAndUpdate(
+        selector = query,
         update = setStatusOperation(InProgress, None),
         fetchNewObject = true,
-        fields = Some(Json.obj(workItemFields.id -> 1))
+        upsert = false,
+        sort = None,
+        fields = Some(Json.obj(workItemFields.id -> 1)),
+        bypassDocumentValidation = false,
+        writeConcern = WriteConcern.Default,
+        maxTime = None,
+        collation = None,
+        arrayFilters = Nil
       ).map(
         _.value.map(Json.toJson(_).as[IdList])
       )
@@ -167,27 +174,35 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
   }
 
   def markAs(id: ID, status: ProcessingStatus, availableAt: Option[DateTime] = None)(implicit ec: ExecutionContext): Future[Boolean] =
-    collection.update(
-      selector = Json.obj(workItemFields.id -> id),
-      update = setStatusOperation(status, availableAt)
+    collection.update(ordered = false).one(
+      q = Json.obj(workItemFields.id -> id),
+      u = setStatusOperation(status, availableAt)
     ).map(_.n > 0)
 
   def complete(id: ID, newStatus: ProcessingStatus with ResultStatus)(implicit ec: ExecutionContext): Future[Boolean] = {
-    collection.update(
-      selector = Json.obj(workItemFields.id -> id, workItemFields.status -> InProgress),
-      update = setStatusOperation(newStatus, None)
+    collection.update(ordered = false).one(
+      q = Json.obj(workItemFields.id -> id, workItemFields.status -> InProgress),
+      u = setStatusOperation(newStatus, None)
     ).map(_.nModified > 0)
   }
 
   def cancel(id: ID)(implicit ec: ExecutionContext): Future[StatusUpdateResult] = {
     import uk.gov.hmrc.workitem.StatusUpdateResult._
-    findAndUpdate(
-      query = Json.obj(
+    collection.findAndUpdate(
+      selector = Json.obj(
         workItemFields.id -> id,
         workItemFields.status -> Json.obj("$in" -> List(ToDo, Failed, PermanentlyFailed, Ignored, Duplicate, Deferred)) // TODO we should be able to express the valid to/from states in traits of ProcessingStatus
       ),
       update = setStatusOperation(Cancelled, None),
-      fetchNewObject = false
+      fetchNewObject = false,
+      upsert = false,
+      sort = None,
+      fields = None,
+      bypassDocumentValidation = false,
+      writeConcern = WriteConcern.Default,
+      maxTime = None,
+      collation = None,
+      arrayFilters = Nil
     ).flatMap { res =>
       res.value match {
         case Some(item) => Future.successful(Updated(
