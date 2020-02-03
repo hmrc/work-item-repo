@@ -21,7 +21,7 @@ import org.joda.time.chrono.ISOChronology
 import org.joda.time.{DateTime, Duration, LocalDate}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.{BeforeAndAfterEach, Suite}
-import play.api.libs.json.Json
+import play.api.libs.json.{Format, Json, OFormat, Reads, Writes}
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
@@ -138,8 +138,8 @@ case class ExampleItemWithModule(_id: BSONObjectID, updatedAt: DateTime, value: 
 
 object ExampleItemWithModule {
 
-  implicit val dateReads = ReactiveMongoFormats.dateTimeRead
-  implicit val dateWrites = ReactiveMongoFormats.dateTimeWrite
-  implicit val objectIdFormats = ReactiveMongoFormats.objectIdFormats
-  implicit val formats = Json.format[ExampleItemWithModule]
+  implicit val dateReads: Reads[DateTime] = ReactiveMongoFormats.dateTimeRead
+  implicit val dateWrites: Writes[DateTime] = ReactiveMongoFormats.dateTimeWrite
+  implicit val objectIdFormats: Format[BSONObjectID] = ReactiveMongoFormats.objectIdFormats
+  implicit val formats: OFormat[ExampleItemWithModule] = Json.format[ExampleItemWithModule]
 }

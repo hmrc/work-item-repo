@@ -25,6 +25,7 @@ import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.language.reflectiveCalls
 
 class WorkItemModuleRepositorySpec extends WordSpec
                                       with Matchers
@@ -49,7 +50,7 @@ class WorkItemModuleRepositorySpec extends WordSpec
         "$set" -> Json.obj("_id" -> _id, "updatedAt" -> documentCreationTime, "value" -> "test")
       ).deepMerge(WorkItemModuleRepository.upsertModuleQuery("testModule", workItemModuleCreationTime))
 
-      repo.collection.update[JsObject, JsObject](Json.obj("_id" -> _id), document, upsert = true).
+      repo.collection.update(ordered = false).one(Json.obj("_id" -> _id), document, upsert = true).
         futureValue.n shouldBe 1
 
       repo.pullOutstanding(documentCreationTime.plusHours(2), documentCreationTime.plusHours(2)).
@@ -91,13 +92,13 @@ class WorkItemModuleRepositorySpec extends WordSpec
         "$set" -> Json.obj("_id" -> _id, "updatedAt" -> documentCreationTime, "value" -> "test")
       ).deepMerge(WorkItemModuleRepository.upsertModuleQuery("testModule", workItemModuleCreationTime))
 
-      repo.collection.update[JsObject, JsObject](Json.obj("_id" -> _id), document, upsert = true).
+      repo.collection.update(ordered = false).one(Json.obj("_id" -> _id), document, upsert = true).
         futureValue.n shouldBe 1
 
       repo.markAs(_id, Succeeded).futureValue shouldBe true
 
       val Some(workItem: WorkItem[ExampleItemWithModule]) =
-        repo.collection.find(Json.obj("_id" -> _id)).one[WorkItem[ExampleItemWithModule]].futureValue
+        repo.collection.find[JsObject,ExampleItemWithModule](selector = Json.obj("_id" -> _id), projection = None).one[WorkItem[ExampleItemWithModule]].futureValue
       workItem.id shouldBe _id
       workItem.status shouldBe Succeeded
     }
