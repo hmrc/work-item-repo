@@ -20,22 +20,16 @@ object LibDependencies {
 
   def apply(): Seq[ModuleID] = compile ++ test
 
-  private val play25Version = "2.5.19"
-  private val play26Version = "2.6.20"
+  private val play26Version = "2.6.23"
 
   private val compile: Seq[ModuleID] = PlayCrossCompilation.dependencies(
     shared = Seq(
       "io.dropwizard.metrics" % "metrics-graphite"      % "3.2.5"
     ),
-    play25 = Seq(
-      "com.typesafe.play"     %% "play"                 % play25Version,
-      "com.kenshoo"           %% "metrics-play"         % "2.5.9_0.5.1",
-      "uk.gov.hmrc"           %% "metrix"               % "3.11.0-play-25"
-    ),
     play26 = Seq(
       "com.typesafe.play"     %% "play"                 % play26Version,
       "com.kenshoo"           %% "metrics-play"         % "2.6.19_0.7.0",
-      "uk.gov.hmrc"           %% "metrix"               % "3.11.0-play-26"
+      "uk.gov.hmrc"           %% "metrix"               % "4.1.0-play-26"
     )
   )
 
@@ -44,15 +38,21 @@ object LibDependencies {
       "org.pegdown"    % "pegdown"     % "1.6.0"          % Test,
       "org.scalatest"  %% "scalatest"  % "3.0.5"          % Test
     ),
-    play25 = Seq(
-      "com.typesafe.play" %% "play-test"          % play25Version     % Test,
-      "uk.gov.hmrc"       %% "reactivemongo-test" % "4.16.0-play-25"  % Test,
-      "uk.gov.hmrc"       %% "hmrctest"           % "3.9.0-play-25"   % Test
-    ),
     play26 = Seq(
       "com.typesafe.play" %% "play-test"          % play26Version     % Test,
       "uk.gov.hmrc"       %% "reactivemongo-test" % "4.16.0-play-26"  % Test,
       "uk.gov.hmrc"       %% "hmrctest"           % "3.9.0-play-26"   % Test
     )
+  )
+
+  private val akkaVersion = "2.5.23"
+  private val akkaHttpVersion = "10.0.15"
+  // Ensure akka versions do not mismatch
+  val overrides = Seq(
+    "com.typesafe.akka" %% "akka-stream"    % akkaVersion,
+    "com.typesafe.akka" %% "akka-protobuf"  % akkaVersion,
+    "com.typesafe.akka" %% "akka-slf4j"     % akkaVersion,
+    "com.typesafe.akka" %% "akka-actor"     % akkaVersion,
+    "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
   )
 }
