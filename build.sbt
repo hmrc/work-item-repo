@@ -15,7 +15,7 @@ scalaVersion := "2.11.12"
 
 crossScalaVersions  := Seq("2.11.12", "2.12.10")
 
-libraryDependencies ++= LibDependencies()
+libraryDependencies ++= LibDependencies.compile ++ LibDependencies.test
 dependencyOverrides ++= LibDependencies.overrides.toSet
 
 resolvers := Seq(

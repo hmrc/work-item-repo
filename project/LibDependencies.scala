@@ -22,7 +22,7 @@ object LibDependencies {
 
   private val play26Version = "2.6.23"
 
-  private val compile: Seq[ModuleID] = PlayCrossCompilation.dependencies(
+  val compile: Seq[ModuleID] = PlayCrossCompilation.dependencies(
     shared = Seq(
       "io.dropwizard.metrics" % "metrics-graphite"      % "3.2.5"
     ),
@@ -33,7 +33,7 @@ object LibDependencies {
     )
   )
 
-  private val test: Seq[ModuleID] = PlayCrossCompilation.dependencies(
+  val test: Seq[ModuleID] = PlayCrossCompilation.dependencies(
     shared = Seq(
       "org.pegdown"    % "pegdown"     % "1.6.0"          % Test,
       "org.scalatest"  %% "scalatest"  % "3.0.5"          % Test
