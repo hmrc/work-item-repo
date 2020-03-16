@@ -29,7 +29,7 @@ object LibDependencies {
     play26 = Seq(
       "com.typesafe.play"     %% "play"                 % play26Version,
       "com.kenshoo"           %% "metrics-play"         % "2.6.19_0.7.0",
-      "uk.gov.hmrc"           %% "metrix"               % "4.1.0-play-26"
+      "uk.gov.hmrc"           %% "metrix"               % "4.2.0-play-26"
     )
   )
 
@@ -40,7 +40,7 @@ object LibDependencies {
     ),
     play26 = Seq(
       "com.typesafe.play" %% "play-test"          % play26Version     % Test,
-      "uk.gov.hmrc"       %% "reactivemongo-test" % "4.16.0-play-26"  % Test,
+      "uk.gov.hmrc"       %% "reactivemongo-test" % "4.17.0-play-26"  % Test,
       "uk.gov.hmrc"       %% "hmrctest"           % "3.9.0-play-26"   % Test
     )
   )
