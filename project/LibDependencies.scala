@@ -21,6 +21,7 @@ object LibDependencies {
   def apply(): Seq[ModuleID] = compile ++ test
 
   private val play26Version = "2.6.23"
+  private val play27Version = "2.7.4"
 
   val compile: Seq[ModuleID] = PlayCrossCompilation.dependencies(
     shared = Seq(
@@ -29,7 +30,12 @@ object LibDependencies {
     play26 = Seq(
       "com.typesafe.play"     %% "play"                 % play26Version,
       "com.kenshoo"           %% "metrics-play"         % "2.6.19_0.7.0",
-      "uk.gov.hmrc"           %% "metrix"               % "4.2.0-play-26"
+      "uk.gov.hmrc"           %% "metrix"               % "4.3.0-play-26"
+    ),
+    play27 = Seq(
+      "com.typesafe.play"     %% "play"                 % play27Version,
+      "com.kenshoo"           %% "metrics-play"         % "2.6.19_0.7.0",
+      "uk.gov.hmrc"           %% "metrix"               % "4.3.0-play-27"
     )
   )
 
@@ -40,19 +46,11 @@ object LibDependencies {
     ),
     play26 = Seq(
       "com.typesafe.play" %% "play-test"          % play26Version     % Test,
-      "uk.gov.hmrc"       %% "reactivemongo-test" % "4.17.0-play-26"  % Test,
-      "uk.gov.hmrc"       %% "hmrctest"           % "3.9.0-play-26"   % Test
+      "uk.gov.hmrc"       %% "reactivemongo-test" % "4.18.0-play-26"  % Test
+    ),
+    play27 = Seq(
+      "com.typesafe.play" %% "play-test"          % play27Version     % Test,
+      "uk.gov.hmrc"       %% "reactivemongo-test" % "4.18.0-play-27"  % Test
     )
-  )
-
-  private val akkaVersion = "2.5.23"
-  private val akkaHttpVersion = "10.0.15"
-  // Ensure akka versions do not mismatch
-  val overrides = Seq(
-    "com.typesafe.akka" %% "akka-stream"    % akkaVersion,
-    "com.typesafe.akka" %% "akka-protobuf"  % akkaVersion,
-    "com.typesafe.akka" %% "akka-slf4j"     % akkaVersion,
-    "com.typesafe.akka" %% "akka-actor"     % akkaVersion,
-    "com.typesafe.akka" %% "akka-http-core" % akkaHttpVersion
   )
 }
