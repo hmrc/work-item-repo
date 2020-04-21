@@ -46,7 +46,7 @@ class WorkItemModuleRepositorySpec extends WordSpec
       val workItemModuleCreationTime = documentCreationTime.plusHours(1)
 
       val document = Json.obj(
-        "$set" -> Json.obj("_id" -> _id, "updatedAt" -> documentCreationTime, "value" -> "test")
+        "$set" -> Json.obj("_id" -> _id, "updatedAt" -> documentCreationTime, "receivedAt" -> documentCreationTime, "value" -> "test")
       ).deepMerge(WorkItemModuleRepository.upsertModuleQuery("testModule", workItemModuleCreationTime))
 
       repo.collection.update[JsObject, JsObject](Json.obj("_id" -> _id), document, upsert = true).

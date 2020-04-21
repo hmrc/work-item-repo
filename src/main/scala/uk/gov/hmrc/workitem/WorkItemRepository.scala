@@ -116,7 +116,7 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
     Json.reads[IdList]
   }
 
-  def pullOutstanding(failedBefore: DateTime, availableBefore: DateTime)(implicit ec: ExecutionContext): Future[Option[WorkItem[T]]] = {
+  def pullOutstanding(failedBefore: DateTime, availableBefore: DateTime, createdAfter: Option[DateTime] = None)(implicit ec: ExecutionContext): Future[Option[WorkItem[T]]] = {
 
     def getWorkItem(idList: IdList): Future[Option[WorkItem[T]]] = {
       import ReactiveMongoFormats.objectIdWrite
@@ -126,56 +126,70 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
       ).one[WorkItem[T]]
     }
 
-    val id = findNextItemId(failedBefore, availableBefore)
+    val id = findNextItemId(failedBefore, availableBefore, createdAfter)
     id.map(_.map(getWorkItem)).flatMap(_.getOrElse(Future.successful(None)))
   }
 
-  private def findNextItemId(failedBefore: DateTime, availableBefore: DateTime)(implicit ec: ExecutionContext) : Future[Option[IdList]] = {
+  private def todoQuery(availableBefore: DateTime, createdAfter: Option[DateTime]): JsObject = {
+    Json.obj(
+      workItemFields.status -> ToDo,
+      workItemFields.availableAt -> Json.obj("$lt" -> availableBefore)
+    ) ++ createdAfter.map(when => Json.obj(workItemFields.receivedAt -> when)).getOrElse(Json.obj())
+  }
 
-    def findNextItemIdByQuery(query: JsObject)(implicit ec: ExecutionContext): Future[Option[IdList]] =
-      findAndUpdate(
-        query = query,
-        update = setStatusOperation(InProgress, None),
-        fetchNewObject = true,
-        fields = Some(Json.obj(workItemFields.id -> 1))
-      ).map(
-        _.value.map(Json.toJson(_).as[IdList])
-      )
+  private def failedQuery(failedBefore: DateTime, availableBefore: DateTime, createdAfter: Option[DateTime]): JsObject = {
+    Json.obj("$or" -> Seq(
+      Json.obj(
+        workItemFields.status -> Failed,
+        workItemFields.updatedAt -> Json.obj("$lt" -> failedBefore),
+        workItemFields.availableAt -> Json.obj("$lt" -> availableBefore)
+      )  ++ createdAfter.map(when => Json.obj(workItemFields.receivedAt -> when)).getOrElse(Json.obj()),
+      Json.obj(
+        workItemFields.status -> Failed,
+        workItemFields.updatedAt -> Json.obj("$lt" -> failedBefore),
+        workItemFields.availableAt -> Json.obj("$exists" -> false))
+    ))
+  }
 
-    def todoQuery(failedBefore: DateTime, availableBefore: DateTime): JsObject = {
-      Json.obj(workItemFields.status -> ToDo,       workItemFields.availableAt -> Json.obj("$lt" -> availableBefore))
-    }
+  private def inProgressQuery(createdAfter: Option[DateTime]): JsObject = {
+    Json.obj(
+      workItemFields.status -> InProgress,
+      workItemFields.updatedAt -> Json.obj("$lt" -> now.minus(inProgressRetryAfter))
+    ) ++ createdAfter.map(when => Json.obj(workItemFields.receivedAt -> when)).getOrElse(Json.obj())
+  }
 
-    def failedQuery(failedBefore: DateTime, availableBefore: DateTime): JsObject = {
-      Json.obj("$or" -> Seq(
-        Json.obj(workItemFields.status -> Failed,     workItemFields.updatedAt -> Json.obj("$lt" -> failedBefore), workItemFields.availableAt -> Json.obj("$lt" -> availableBefore)),
-        Json.obj(workItemFields.status -> Failed,     workItemFields.updatedAt -> Json.obj("$lt" -> failedBefore), workItemFields.availableAt -> Json.obj("$exists" -> false))
-      ))
-    }
+  private def findNextItemIdByQuery(query: JsObject)(implicit ec: ExecutionContext): Future[Option[IdList]] = {
+    findAndUpdate(
+      query = query,
+      update = setStatusOperation(InProgress, None, None),
+      fetchNewObject = true,
+      fields = Some(Json.obj(workItemFields.id -> 1))
+    ).map(
+      _.value.map(Json.toJson(_).as[IdList])
+    )
+  }
 
-    def inProgressQuery(failedBefore: DateTime, availableBefore: DateTime): JsObject = {
-      Json.obj(workItemFields.status -> InProgress, workItemFields.updatedAt -> Json.obj("$lt" -> now.minus(inProgressRetryAfter)))
-    }
-
-    findNextItemIdByQuery(todoQuery(failedBefore, availableBefore)).flatMap {
-      case None => findNextItemIdByQuery(failedQuery(failedBefore, availableBefore)).flatMap {
-        case None => findNextItemIdByQuery(inProgressQuery(failedBefore, availableBefore))
+  private def findNextItemId(failedBefore: DateTime, availableBefore: DateTime, createdAfter: Option[DateTime])(implicit ec: ExecutionContext) : Future[Option[IdList]] = {
+    findNextItemIdByQuery(todoQuery(availableBefore,createdAfter)).flatMap {
+      case None => findNextItemIdByQuery(failedQuery(failedBefore,availableBefore, createdAfter)).flatMap {
+        case None => findNextItemIdByQuery(inProgressQuery(createdAfter))
         case item => Future.successful(item)
       }
       case item => Future.successful(item)
     }
   }
 
-  def markAs(id: ID, status: ProcessingStatus, availableAt: Option[DateTime] = None)(implicit ec: ExecutionContext): Future[Boolean] =
+  def markAs(id: ID, status: ProcessingStatus, availableAt: Option[DateTime] = None, receivedAt: Option[DateTime] = None)(implicit ec: ExecutionContext): Future[Boolean] =
     collection.update(
       selector = Json.obj(workItemFields.id -> id),
-      update = setStatusOperation(status, availableAt)
+      update = setStatusOperation(status, availableAt, receivedAt)
     ).map(_.n > 0)
+
 
   def complete(id: ID, newStatus: ProcessingStatus with ResultStatus)(implicit ec: ExecutionContext): Future[Boolean] = {
     collection.update(
       selector = Json.obj(workItemFields.id -> id, workItemFields.status -> InProgress),
-      update = setStatusOperation(newStatus, None)
+      update = setStatusOperation(newStatus, None, None)
     ).map(_.nModified > 0)
   }
 
@@ -186,7 +200,7 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
         workItemFields.id -> id,
         workItemFields.status -> Json.obj("$in" -> List(ToDo, Failed, PermanentlyFailed, Ignored, Duplicate, Deferred)) // TODO we should be able to express the valid to/from states in traits of ProcessingStatus
       ),
-      update = setStatusOperation(Cancelled, None),
+      update = setStatusOperation(Cancelled, None, None),
       fetchNewObject = false
     ).flatMap { res =>
       res.value match {
@@ -205,11 +219,11 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
   def count(state: ProcessingStatus)(implicit ec: ExecutionContext): Future[Int] =
     count(Json.obj(workItemFields.status -> state.name), ReadPreference.secondaryPreferred)
 
-  private def setStatusOperation(newStatus: ProcessingStatus, availableAt: Option[DateTime]): JsObject = {
+  private def setStatusOperation(newStatus: ProcessingStatus, availableAt: Option[DateTime], receivedAt: Option[DateTime]): JsObject = {
     val fields = Json.obj(
       workItemFields.status -> newStatus,
       workItemFields.updatedAt -> now
-    ) ++ availableAt.map(when => Json.obj(workItemFields.availableAt -> when)).getOrElse(Json.obj())
+    ) ++ availableAt.map(when => Json.obj(workItemFields.availableAt -> when)).getOrElse(Json.obj()) ++ receivedAt.map(when => Json.obj(workItemFields.receivedAt -> when)).getOrElse(Json.obj())
 
     val statusUpdate = Json.obj("$set" -> fields)
     if (newStatus == Failed) statusUpdate ++ Json.obj("$inc" -> Json.obj(workItemFields.failureCount -> 1))
