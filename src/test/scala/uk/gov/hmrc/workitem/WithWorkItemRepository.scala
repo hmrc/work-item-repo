@@ -47,10 +47,10 @@ trait TimeSource {
 }
 
 trait WithWorkItemRepositoryModule
-  extends ScalaFutures
-  with MongoSpecSupport
-  with BeforeAndAfterEach
-  with TimeSource {
+    extends ScalaFutures
+    with MongoSpecSupport
+    with BeforeAndAfterEach
+    with TimeSource {
   this: Suite =>
 
   val appConf = ConfigFactory.load("application.test.conf")
@@ -70,11 +70,11 @@ trait WithWorkItemRepositoryModule
 }
 
 trait WithWorkItemRepository
-  extends ScalaFutures
-  with MongoSpecSupport
-  with BeforeAndAfterEach
-  with IntegrationPatience
-  with TimeSource {
+    extends ScalaFutures
+    with MongoSpecSupport
+    with BeforeAndAfterEach
+    with IntegrationPatience
+    with TimeSource {
   this: Suite =>
 
   import uk.gov.hmrc.mongo.json.ReactiveMongoFormats.objectIdFormats
@@ -90,21 +90,22 @@ trait WithWorkItemRepository
       appConf
     ) {
 
-    override lazy val inProgressRetryAfter: Duration = Duration.standardHours(1)
+      override lazy val inProgressRetryAfter: Duration =
+        Duration.standardHours(1)
 
-    def inProgressRetryAfterProperty: String = "retryAfterSeconds"
+      def inProgressRetryAfterProperty: String = "retryAfterSeconds"
 
-    def now: DateTime = timeSource.now
+      def now: DateTime = timeSource.now
 
-    def workItemFields: WorkItemFieldNames = new WorkItemFieldNames {
-      val receivedAt = "receivedAt"
-      val updatedAt = "updatedAt"
-      val availableAt = "availableAt"
-      val status = "status"
-      val id = "_id"
-      val failureCount = "failureCount"
+      def workItemFields: WorkItemFieldNames = new WorkItemFieldNames {
+        val receivedAt = "receivedAt"
+        val updatedAt = "updatedAt"
+        val availableAt = "availableAt"
+        val status = "status"
+        val id = "_id"
+        val failureCount = "failureCount"
+      }
     }
-  }
 
   val collectionName = "items"
   lazy val repo = exampleItemRepository(collectionName)
@@ -133,8 +134,9 @@ object ExampleItem {
   implicit val formats = Json.format[ExampleItem]
 }
 
-
-case class ExampleItemWithModule(_id: BSONObjectID, updatedAt: DateTime, value: String)
+case class ExampleItemWithModule(_id: BSONObjectID,
+                                 updatedAt: DateTime,
+                                 value: String)
 
 object ExampleItemWithModule {
 

@@ -16,6 +16,6 @@
 
 package uk.gov.hmrc.workitem
 
-trait WorkItemFieldNames  {
+trait WorkItemFieldNames {
   val receivedAt, availableAt, updatedAt, status, id, failureCount: String
 }

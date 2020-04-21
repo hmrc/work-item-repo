@@ -19,7 +19,10 @@ package uk.gov.hmrc.workitem
 sealed trait StatusUpdateResult
 
 object StatusUpdateResult {
-  case class Updated(previousStatus: ProcessingStatus, newStatus: ProcessingStatus) extends StatusUpdateResult
-  case class NotUpdated(currentState: ProcessingStatus) extends StatusUpdateResult
+  case class Updated(previousStatus: ProcessingStatus,
+                     newStatus: ProcessingStatus)
+      extends StatusUpdateResult
+  case class NotUpdated(currentState: ProcessingStatus)
+      extends StatusUpdateResult
   case object NotFound extends StatusUpdateResult
 }

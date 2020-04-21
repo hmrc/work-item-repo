@@ -26,12 +26,13 @@ import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class WorkItemModuleRepositorySpec extends WordSpec
-                                      with Matchers
-                                      with ScalaFutures
-                                      with BeforeAndAfterEach
-                                      with IntegrationPatience
-                                      with WithWorkItemRepositoryModule {
+class WorkItemModuleRepositorySpec
+    extends WordSpec
+    with Matchers
+    with ScalaFutures
+    with BeforeAndAfterEach
+    with IntegrationPatience
+    with WithWorkItemRepositoryModule {
   implicit val formats = ExampleItemWithModule.formats
   implicit val dateWrites: Writes[DateTime] = ReactiveMongoFormats.dateTimeWrite
 
@@ -45,15 +46,27 @@ class WorkItemModuleRepositorySpec extends WordSpec
       val documentCreationTime = timeSource.now
       val workItemModuleCreationTime = documentCreationTime.plusHours(1)
 
-      val document = Json.obj(
-        "$set" -> Json.obj("_id" -> _id, "updatedAt" -> documentCreationTime, "value" -> "test")
-      ).deepMerge(WorkItemModuleRepository.upsertModuleQuery("testModule", workItemModuleCreationTime))
+      val document = Json
+        .obj(
+          "$set" -> Json.obj("_id" -> _id,
+                             "updatedAt" -> documentCreationTime,
+                             "value" -> "test")
+        )
+        .deepMerge(WorkItemModuleRepository
+          .upsertModuleQuery("testModule", workItemModuleCreationTime))
 
-      repo.collection.update[JsObject, JsObject](Json.obj("_id" -> _id), document, upsert = true).
-        futureValue.n shouldBe 1
+      repo.collection
+        .update[JsObject, JsObject](Json.obj("_id" -> _id),
+                                    document,
+                                    upsert = true)
+        .futureValue
+        .n shouldBe 1
 
-      repo.pullOutstanding(documentCreationTime.plusHours(2), documentCreationTime.plusHours(2)).
-        futureValue shouldBe Some(WorkItem[ExampleItemWithModule](
+      repo
+        .pullOutstanding(documentCreationTime.plusHours(2),
+                         documentCreationTime.plusHours(2))
+        .futureValue shouldBe Some(
+        WorkItem[ExampleItemWithModule](
           _id,
           workItemModuleCreationTime,
           timeSource.now,
@@ -61,43 +74,68 @@ class WorkItemModuleRepositorySpec extends WordSpec
           InProgress,
           0,
           ExampleItemWithModule(_id, documentCreationTime, "test")
-        )
-      )
+        ))
     }
 
     "never update T" in {
       intercept[IllegalStateException] {
-        repo.pushNew(ExampleItemWithModule(BSONObjectID.generate, timeSource.now, "test"), timeSource.now)
+        repo.pushNew(ExampleItemWithModule(BSONObjectID.generate,
+                                           timeSource.now,
+                                           "test"),
+                     timeSource.now)
       }.getMessage shouldBe "The model object cannot be created via the work item module repository"
 
       intercept[IllegalStateException] {
-        val m = ExampleItemWithModule(BSONObjectID.generate, timeSource.now, "test")
-        WorkItemModuleRepository.formatsOf[ExampleItemWithModule]("testModule").writes(WorkItem(BSONObjectID.generate, timeSource.now, timeSource.now, timeSource.now, ToDo, 0, m))
+        val m =
+          ExampleItemWithModule(BSONObjectID.generate, timeSource.now, "test")
+        WorkItemModuleRepository
+          .formatsOf[ExampleItemWithModule]("testModule")
+          .writes(
+            WorkItem(BSONObjectID.generate,
+                     timeSource.now,
+                     timeSource.now,
+                     timeSource.now,
+                     ToDo,
+                     0,
+                     m))
       }.getMessage shouldBe "A work item module is not supposed to be written"
 
     }
 
     "use the module name as the gauge name" in {
-      repo.metricPrefix should be ("testModule")
+      repo.metricPrefix should be("testModule")
     }
 
     "change state successfully" in {
-      implicit val fmt = WorkItemModuleRepository.formatsOf[ExampleItemWithModule]("testModule")
+      implicit val fmt =
+        WorkItemModuleRepository.formatsOf[ExampleItemWithModule]("testModule")
       val _id = BSONObjectID.generate
       val documentCreationTime = timeSource.now
       val workItemModuleCreationTime = documentCreationTime.plusHours(1)
 
-      val document = Json.obj(
-        "$set" -> Json.obj("_id" -> _id, "updatedAt" -> documentCreationTime, "value" -> "test")
-      ).deepMerge(WorkItemModuleRepository.upsertModuleQuery("testModule", workItemModuleCreationTime))
+      val document = Json
+        .obj(
+          "$set" -> Json.obj("_id" -> _id,
+                             "updatedAt" -> documentCreationTime,
+                             "value" -> "test")
+        )
+        .deepMerge(WorkItemModuleRepository
+          .upsertModuleQuery("testModule", workItemModuleCreationTime))
 
-      repo.collection.update[JsObject, JsObject](Json.obj("_id" -> _id), document, upsert = true).
-        futureValue.n shouldBe 1
+      repo.collection
+        .update[JsObject, JsObject](Json.obj("_id" -> _id),
+                                    document,
+                                    upsert = true)
+        .futureValue
+        .n shouldBe 1
 
       repo.markAs(_id, Succeeded).futureValue shouldBe true
 
       val Some(workItem: WorkItem[ExampleItemWithModule]) =
-        repo.collection.find(Json.obj("_id" -> _id)).one[WorkItem[ExampleItemWithModule]].futureValue
+        repo.collection
+          .find(Json.obj("_id" -> _id))
+          .one[WorkItem[ExampleItemWithModule]]
+          .futureValue
       workItem.id shouldBe _id
       workItem.status shouldBe Succeeded
     }

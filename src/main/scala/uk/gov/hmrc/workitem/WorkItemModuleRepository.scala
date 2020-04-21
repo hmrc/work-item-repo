@@ -26,29 +26,42 @@ import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 import scala.concurrent.{ExecutionContext, Future}
 
-abstract class WorkItemModuleRepository[T](collectionName: String,
-                                           moduleName: String,
-                                           mongo: () => DB,
-                                           config: Config
-                                          )(implicit tmf: Manifest[T], trd: Reads[T])
-  extends WorkItemRepository[T, BSONObjectID](
-    collectionName,
-    mongo,
-    WorkItemModuleRepository.formatsOf[T](moduleName),
-    config
-  ) {
+abstract class WorkItemModuleRepository[T](
+    collectionName: String,
+    moduleName: String,
+    mongo: () => DB,
+    config: Config)(implicit tmf: Manifest[T], trd: Reads[T])
+    extends WorkItemRepository[T, BSONObjectID](
+      collectionName,
+      mongo,
+      WorkItemModuleRepository.formatsOf[T](moduleName),
+      config
+    ) {
 
-  def protectFromWrites = throw new IllegalStateException("The model object cannot be created via the work item module repository")
+  def protectFromWrites =
+    throw new IllegalStateException(
+      "The model object cannot be created via the work item module repository")
 
-  override def pushNew(item: T, receivedAt: DateTime)(implicit ec: ExecutionContext): Future[WorkItem[T]] = protectFromWrites
+  override def pushNew(item: T, receivedAt: DateTime)(
+      implicit ec: ExecutionContext): Future[WorkItem[T]] = protectFromWrites
 
-  override def pushNew(item: T, receivedAt: DateTime, initialState: (T) => ProcessingStatus)(implicit ec: ExecutionContext): Future[WorkItem[T]] = protectFromWrites
+  override def pushNew(item: T,
+                       receivedAt: DateTime,
+                       initialState: (T) => ProcessingStatus)(
+      implicit ec: ExecutionContext): Future[WorkItem[T]] = protectFromWrites
 
-  override def pushNew(items: Seq[T], receivedAt: DateTime)(implicit ec: ExecutionContext): Future[Seq[WorkItem[T]]] = protectFromWrites
+  override def pushNew(items: Seq[T], receivedAt: DateTime)(
+      implicit ec: ExecutionContext): Future[Seq[WorkItem[T]]] =
+    protectFromWrites
 
-  override def pushNew(items: Seq[T], receivedAt: DateTime, initialState: (T) => ProcessingStatus)(implicit ec: ExecutionContext): Future[Seq[WorkItem[T]]] = protectFromWrites
+  override def pushNew(items: Seq[T],
+                       receivedAt: DateTime,
+                       initialState: (T) => ProcessingStatus)(
+      implicit ec: ExecutionContext): Future[Seq[WorkItem[T]]] =
+    protectFromWrites
 
-  override lazy val workItemFields: WorkItemFieldNames = WorkItemModuleRepository.workItemFieldNames(moduleName)
+  override lazy val workItemFields: WorkItemFieldNames =
+    WorkItemModuleRepository.workItemFieldNames(moduleName)
 
   override lazy val metricPrefix: String = moduleName
 
@@ -75,29 +88,36 @@ object WorkItemModuleRepository {
   }
 
   def upsertModuleQuery(moduleName: String, time: DateTime) = {
-    implicit val dateWrites: Writes[DateTime] = ReactiveMongoFormats.dateTimeWrite
+    implicit val dateWrites: Writes[DateTime] =
+      ReactiveMongoFormats.dateTimeWrite
 
     val fieldNames = workItemFieldNames(moduleName)
     Json.obj(
       "$setOnInsert" -> Json.obj(fieldNames.availableAt -> time),
-      "$set" -> Json.obj(fieldNames.updatedAt -> time, fieldNames.status -> ToDo, fieldNames.failureCount -> 0)
+      "$set" -> Json.obj(fieldNames.updatedAt -> time,
+                         fieldNames.status -> ToDo,
+                         fieldNames.failureCount -> 0)
     )
   }
 
-
-  def formatsOf[T](moduleName:String)(implicit trd:Reads[T]): Format[WorkItem[T]] = {
+  def formatsOf[T](moduleName: String)(
+      implicit trd: Reads[T]): Format[WorkItem[T]] = {
     val reads: Reads[WorkItem[T]] = (
       (__ \ "_id").read[BSONObjectID] and
         (__ \ moduleName \ s"$createdAtProperty").read[DateTime] and
         (__ \ moduleName \ s"$updatedAtProperty").read[DateTime] and
         (__ \ moduleName \ s"$createdAtProperty").read[DateTime] and
         (__ \ moduleName \ s"$statusProperty").read[ProcessingStatus] and
-        (__ \ moduleName \ s"$failureCountProperty").read[Int].orElse(Reads.pure(0)) and
+        (__ \ moduleName \ s"$failureCountProperty")
+          .read[Int]
+          .orElse(Reads.pure(0)) and
         __.read[T]
-      ) (WorkItem.apply[T] _)
+    )(WorkItem.apply[T] _)
 
     val writes: Writes[WorkItem[T]] = new Writes[WorkItem[T]] {
-      override def writes(o: WorkItem[T]): JsValue = throw new IllegalStateException("A work item module is not supposed to be written")
+      override def writes(o: WorkItem[T]): JsValue =
+        throw new IllegalStateException(
+          "A work item module is not supposed to be written")
     }
 
     Format(reads, writes)

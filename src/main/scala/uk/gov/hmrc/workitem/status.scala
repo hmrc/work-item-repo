@@ -25,23 +25,38 @@ sealed trait ProcessingStatus {
 sealed trait ResultStatus extends ProcessingStatus
 
 case object ToDo extends ProcessingStatus
-case object InProgress extends ProcessingStatus { override val name = "in-progress" }
+case object InProgress extends ProcessingStatus {
+  override val name = "in-progress"
+}
 case object Succeeded extends ResultStatus
 case object Deferred extends ResultStatus
 case object Failed extends ResultStatus
-case object PermanentlyFailed extends ResultStatus {override val name = "permanently-failed"}
+case object PermanentlyFailed extends ResultStatus {
+  override val name = "permanently-failed"
+}
 case object Ignored extends ResultStatus
 case object Duplicate extends ResultStatus
 case object Cancelled extends ResultStatus
 
 object ProcessingStatus {
-  val processingStatuses: Set[ProcessingStatus] = Set(ToDo, InProgress, Succeeded, Failed, PermanentlyFailed, Ignored, Duplicate, Deferred, Cancelled)
-  val nameToStatus:Map[String,ProcessingStatus] = processingStatuses.map(s => (s.name, s)).toMap
+  val processingStatuses: Set[ProcessingStatus] = Set(ToDo,
+                                                      InProgress,
+                                                      Succeeded,
+                                                      Failed,
+                                                      PermanentlyFailed,
+                                                      Ignored,
+                                                      Duplicate,
+                                                      Deferred,
+                                                      Cancelled)
+  val nameToStatus: Map[String, ProcessingStatus] =
+    processingStatuses.map(s => (s.name, s)).toMap
 
   implicit val read: Reads[ProcessingStatus] = new Reads[ProcessingStatus] {
     override def reads(json: JsValue): JsResult[ProcessingStatus] = json match {
-      case JsString(status) if nameToStatus.contains(status) => JsSuccess(nameToStatus(status))
-      case other => JsError("Could not convert to ProcessingStatus from " + other)
+      case JsString(status) if nameToStatus.contains(status) =>
+        JsSuccess(nameToStatus(status))
+      case other =>
+        JsError("Could not convert to ProcessingStatus from " + other)
     }
   }
 
@@ -49,13 +64,17 @@ object ProcessingStatus {
     override def writes(p: ProcessingStatus): JsValue = JsString(p.name)
   }
 
-  implicit val bsonReader: BSONReader[BSONString, ProcessingStatus] = new BSONReader[BSONString, ProcessingStatus] {
-    def read(bson: BSONString) = nameToStatus(bson.value)
-  }
+  implicit val bsonReader: BSONReader[BSONString, ProcessingStatus] =
+    new BSONReader[BSONString, ProcessingStatus] {
+      def read(bson: BSONString) = nameToStatus(bson.value)
+    }
 
-  implicit val variantBsonWriter: VariantBSONWriter[ProcessingStatus, BSONString] = new VariantBSONWriter[ProcessingStatus, BSONString] {
-    def write(t: ProcessingStatus) = BSONString(t.name)
-  }
+  implicit val variantBsonWriter
+    : VariantBSONWriter[ProcessingStatus, BSONString] =
+    new VariantBSONWriter[ProcessingStatus, BSONString] {
+      def write(t: ProcessingStatus) = BSONString(t.name)
+    }
 
-  implicit val bsonWriter: BSONWriter[ProcessingStatus, _ <: BSONValue] = DefaultBSONHandlers.findWriter(variantBsonWriter)
+  implicit val bsonWriter: BSONWriter[ProcessingStatus, _ <: BSONValue] =
+    DefaultBSONHandlers.findWriter(variantBsonWriter)
 }
