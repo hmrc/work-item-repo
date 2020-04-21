@@ -35,7 +35,8 @@ class ProcessingStatusSpec extends WordSpec with Matchers {
       Json.parse("\"failed\"").as[ProcessingStatus] should be(Failed)
     }
     "handle PermanentlyFailed" in {
-      Json.parse("\"permanently-failed\"").as[ProcessingStatus] should be(PermanentlyFailed)
+      Json.parse("\"permanently-failed\"").as[ProcessingStatus] should be(
+        PermanentlyFailed)
     }
     "handle Ignored" in {
       Json.parse("\"ignored\"").as[ProcessingStatus] should be(Ignored)
@@ -47,33 +48,34 @@ class ProcessingStatusSpec extends WordSpec with Matchers {
       Json.parse("\"cancelled\"").as[ProcessingStatus] should be(Cancelled)
     }
     "error reading other values" in {
-      Json.parse("\"In Progress\"").validate[ProcessingStatus] should be(a[JsError])
+      Json.parse("\"In Progress\"").validate[ProcessingStatus] should be(
+        a[JsError])
     }
   }
   "writing processing status to JSON" should {
     "handle ToDo" in {
-      Json.toJson(ToDo) should be (JsString("todo"))
+      Json.toJson(ToDo) should be(JsString("todo"))
     }
     "handle InProgress" in {
-      Json.toJson(InProgress) should be (JsString("in-progress"))
+      Json.toJson(InProgress) should be(JsString("in-progress"))
     }
     "handle Succeeded" in {
-      Json.toJson(Succeeded) should be (JsString("succeeded"))
+      Json.toJson(Succeeded) should be(JsString("succeeded"))
     }
     "handle Failed" in {
-      Json.toJson(Failed) should be (JsString("failed"))
+      Json.toJson(Failed) should be(JsString("failed"))
     }
     "handle PermanentlyFailed" in {
-      Json.toJson(PermanentlyFailed) should be (JsString("permanently-failed"))
+      Json.toJson(PermanentlyFailed) should be(JsString("permanently-failed"))
     }
     "handle Ignored" in {
-      Json.toJson(Ignored) should be (JsString("ignored"))
+      Json.toJson(Ignored) should be(JsString("ignored"))
     }
     "handle Duplicate" in {
-      Json.toJson(Duplicate) should be (JsString("duplicate"))
+      Json.toJson(Duplicate) should be(JsString("duplicate"))
     }
     "handle Cancelled" in {
-      Json.toJson(Cancelled) should be (JsString("cancelled"))
+      Json.toJson(Cancelled) should be(JsString("cancelled"))
     }
   }
   "reading processing status from BSON" should {
@@ -90,7 +92,8 @@ class ProcessingStatusSpec extends WordSpec with Matchers {
       BSONString("failed").as[ProcessingStatus] should be(Failed)
     }
     "handle PermanentlyFailed" in {
-      BSONString("permanently-failed").as[ProcessingStatus] should be(PermanentlyFailed)
+      BSONString("permanently-failed").as[ProcessingStatus] should be(
+        PermanentlyFailed)
     }
     "handle Ignored" in {
       BSONString("ignored").as[ProcessingStatus] should be(Ignored)
@@ -102,33 +105,34 @@ class ProcessingStatusSpec extends WordSpec with Matchers {
       BSONString("cancelled").as[ProcessingStatus] should be(Cancelled)
     }
     "error reading other values" in {
-      an [Exception] should be thrownBy BSONString("In Progress").as[ProcessingStatus]
+      an[Exception] should be thrownBy BSONString("In Progress")
+        .as[ProcessingStatus]
     }
   }
   "writing processing status to BSON" should {
     "handle ToDo" in {
-      BSON.write(ToDo) should be (BSONString("todo"))
+      BSON.write(ToDo) should be(BSONString("todo"))
     }
     "handle InProgress" in {
-      BSON.write(InProgress) should be (BSONString("in-progress"))
+      BSON.write(InProgress) should be(BSONString("in-progress"))
     }
     "handle Succeeded" in {
-      BSON.write(Succeeded) should be (BSONString("succeeded"))
+      BSON.write(Succeeded) should be(BSONString("succeeded"))
     }
     "handle Failed" in {
-      BSON.write(Failed) should be (BSONString("failed"))
+      BSON.write(Failed) should be(BSONString("failed"))
     }
     "handle PermanentlyFailed" in {
-      BSON.write(PermanentlyFailed) should be (BSONString("permanently-failed"))
+      BSON.write(PermanentlyFailed) should be(BSONString("permanently-failed"))
     }
     "handle Ignored" in {
-      BSON.write(Ignored) should be (BSONString("ignored"))
+      BSON.write(Ignored) should be(BSONString("ignored"))
     }
     "handle Duplicate" in {
-      BSON.write(Duplicate) should be (BSONString("duplicate"))
+      BSON.write(Duplicate) should be(BSONString("duplicate"))
     }
     "handle Cancelled" in {
-      BSON.write(Cancelled) should be (BSONString("cancelled"))
+      BSON.write(Cancelled) should be(BSONString("cancelled"))
     }
   }
 }

@@ -23,3 +23,6 @@ resolvers := Seq(
 )
 
 playCrossCompilationSettings
+
+scalafmtTestOnCompile in ThisBuild := true
+
