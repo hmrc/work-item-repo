@@ -42,11 +42,11 @@ abstract class WorkItemModuleRepository[T](collectionName: String,
 
   override def pushNew(item: T, receivedAt: DateTime)(implicit ec: ExecutionContext): Future[WorkItem[T]] = protectFromWrites
 
-  override def pushNew(item: T, receivedAt: DateTime, initialState: (T) => ProcessingStatus)(implicit ec: ExecutionContext): Future[WorkItem[T]] = protectFromWrites
+  override def pushNew(item: T, receivedAt: DateTime, initialState: T => ProcessingStatus)(implicit ec: ExecutionContext): Future[WorkItem[T]] = protectFromWrites
 
   override def pushNew(items: Seq[T], receivedAt: DateTime)(implicit ec: ExecutionContext): Future[Seq[WorkItem[T]]] = protectFromWrites
 
-  override def pushNew(items: Seq[T], receivedAt: DateTime, initialState: (T) => ProcessingStatus)(implicit ec: ExecutionContext): Future[Seq[WorkItem[T]]] = protectFromWrites
+  override def pushNew(items: Seq[T], receivedAt: DateTime, initialState: T => ProcessingStatus)(implicit ec: ExecutionContext): Future[Seq[WorkItem[T]]] = protectFromWrites
 
   override lazy val workItemFields: WorkItemFieldNames = WorkItemModuleRepository.workItemFieldNames(moduleName)
 
@@ -60,37 +60,37 @@ object WorkItemModuleRepository {
 
   implicit val dateReads: Reads[DateTime] = ReactiveMongoFormats.dateTimeRead
 
-  private val updatedAtProperty: String = "updatedAt"
   private val createdAtProperty: String = "createdAt"
+  private val availableAtProperty: String = "availableAt"
+  private val updatedAtProperty: String = "updatedAt"
   private val failureCountProperty: String = "failureCount"
   private val statusProperty: String = "status"
 
-  def workItemFieldNames(moduleName: String) = new WorkItemFieldNames {
-    override val availableAt: String = s"$moduleName.$createdAtProperty"
+  def workItemFieldNames(moduleName: String): WorkItemFieldNames = new WorkItemFieldNames {
+    override val availableAt: String = s"$moduleName.$availableAtProperty"
     override val updatedAt: String = s"$moduleName.$updatedAtProperty"
     override val failureCount: String = s"$moduleName.$failureCountProperty"
     override val status: String = s"$moduleName.$statusProperty"
-    override val receivedAt: String = availableAt
+    override val receivedAt: String = s"$moduleName.$createdAtProperty"
     override val id: String = "_id"
   }
 
-  def upsertModuleQuery(moduleName: String, time: DateTime) = {
+  def upsertModuleQuery(moduleName: String, time: DateTime): JsObject = {
     implicit val dateWrites: Writes[DateTime] = ReactiveMongoFormats.dateTimeWrite
 
     val fieldNames = workItemFieldNames(moduleName)
     Json.obj(
-      "$setOnInsert" -> Json.obj(fieldNames.availableAt -> time),
+      "$setOnInsert" -> Json.obj(fieldNames.availableAt -> time, fieldNames.receivedAt -> time),
       "$set" -> Json.obj(fieldNames.updatedAt -> time, fieldNames.status -> ToDo, fieldNames.failureCount -> 0)
     )
   }
-
 
   def formatsOf[T](moduleName:String)(implicit trd:Reads[T]): Format[WorkItem[T]] = {
     val reads: Reads[WorkItem[T]] = (
       (__ \ "_id").read[BSONObjectID] and
         (__ \ moduleName \ s"$createdAtProperty").read[DateTime] and
         (__ \ moduleName \ s"$updatedAtProperty").read[DateTime] and
-        (__ \ moduleName \ s"$createdAtProperty").read[DateTime] and
+        (__ \ moduleName \ s"$availableAtProperty").read[DateTime] and
         (__ \ moduleName \ s"$statusProperty").read[ProcessingStatus] and
         (__ \ moduleName \ s"$failureCountProperty").read[Int].orElse(Reads.pure(0)) and
         __.read[T]
