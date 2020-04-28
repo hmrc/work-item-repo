@@ -65,6 +65,51 @@ class WorkItemModuleRepositorySpec extends WordSpec
       )
     }
 
+    "retrieve items created after the createdAfter date when supplied" in {
+      val _id = BSONObjectID.generate
+      val testTime = timeSource.now
+      val documentCreatedAt = testTime.minusDays(6)
+      val documentAvailableAt = testTime.minusHours(1)
+      val documentUpdatedAt = testTime.minusDays(2)
+
+      val document = Json.obj(
+        "$set" -> Json.obj("_id" -> _id, "updatedAt" -> documentUpdatedAt, "receivedAt" -> documentCreatedAt, "availableAt" -> documentAvailableAt, "value" -> "test")
+      ).deepMerge(WorkItemModuleRepository.upsertModuleQuery("testModule", documentCreatedAt))
+
+      repo.collection.update[JsObject, JsObject](Json.obj("_id" -> _id), document, upsert = true).
+        futureValue.n shouldBe 1
+
+      repo.pullOutstanding(testTime, testTime, Some(testTime.minusDays(7))).
+        futureValue shouldBe Some(WorkItem[ExampleItemWithModule](
+          _id,
+          documentCreatedAt,
+          timeSource.now,
+          documentCreatedAt,
+          InProgress,
+          0,
+          ExampleItemWithModule(_id, documentUpdatedAt, "test")
+        )
+      )
+    }
+
+    "not retrieve items created before the createdAfter date when supplied" in {
+      val _id = BSONObjectID.generate
+      val testTime = timeSource.now
+      val documentCreatedAt = testTime.minusDays(8)
+      val documentAvailableAt = testTime.minusHours(1)
+      val documentUpdatedAt = testTime.minusDays(2)
+
+      val document = Json.obj(
+        "$set" -> Json.obj("_id" -> _id, "updatedAt" -> documentUpdatedAt, "receivedAt" -> documentCreatedAt, "availableAt" -> documentAvailableAt, "value" -> "test")
+      ).deepMerge(WorkItemModuleRepository.upsertModuleQuery("testModule", documentCreatedAt))
+
+      repo.collection.update[JsObject, JsObject](Json.obj("_id" -> _id), document, upsert = true).
+        futureValue.n shouldBe 1
+
+      repo.pullOutstanding(testTime, testTime, Some(testTime.minusDays(7))).
+        futureValue shouldBe None
+    }
+
     "never update T" in {
       intercept[IllegalStateException] {
         repo.pushNew(ExampleItemWithModule(BSONObjectID.generate, timeSource.now, "test"), timeSource.now)

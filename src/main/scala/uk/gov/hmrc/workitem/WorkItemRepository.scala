@@ -134,7 +134,7 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
     Json.obj(
       workItemFields.status -> ToDo,
       workItemFields.availableAt -> Json.obj("$lt" -> availableBefore)
-    ) ++ createdAfter.map(when => Json.obj(workItemFields.receivedAt -> when)).getOrElse(Json.obj())
+    ) ++ createdAfter.map(when => Json.obj(workItemFields.receivedAt -> Json.obj("$gt" -> when))).getOrElse(Json.obj())
   }
 
   private def failedQuery(failedBefore: DateTime, availableBefore: DateTime, createdAfter: Option[DateTime]): JsObject = {
