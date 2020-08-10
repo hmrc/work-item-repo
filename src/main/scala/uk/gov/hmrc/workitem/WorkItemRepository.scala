@@ -29,6 +29,9 @@ import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 import scala.concurrent.{ExecutionContext, Future}
 
+/** The repository to set and get the work item's for processing.
+  * See [[pushNew]] for creating work items, and [[pullOutstanding]] for retrieving them.
+  */
 abstract class WorkItemRepository[T, ID](collectionName: String,
                                          mongo: () => DB,
                                          itemFormat: Format[WorkItem[T]],
@@ -39,11 +42,31 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
   with Operations.FindById[ID, T]
   with MetricSource {
 
+  /** Returns the current date time for setting the updatedAt field.
+    * abstract to allow for test friendly implementations.
+    */
   def now: DateTime
 
+  /** Returns customisable names of the internal fields.
+    * e.g.
+    * {{{
+    * new WorkItemFieldNames {
+    * val receivedAt   = "receivedAt"
+    * val updatedAt    = "updatedAt"
+    * val availableAt  = "receivedAt"
+    * val status       = "status"
+    * val id           = "_id"
+    * val failureCount = "failureCount"
+    * }
+    * }}}
+    */
   def workItemFields: WorkItemFieldNames
 
+  /** Returns the property key which defines the millis in Long format, for the [[inProgressRetryAfter]]
+    * to be looked up in the [[Config]].
+    */
   def inProgressRetryAfterProperty: String
+
 
   def metricPrefix: String = collectionName
 
@@ -55,6 +78,9 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
 
   private implicit val dateFormats: Format[DateTime] = ReactiveMongoFormats.dateTimeFormats
 
+  /** Returns the timeout of any WorkItems marked as InProgress.
+    * WorkItems marked as InProgress will be hidden from [[pullOutstanding]] until this window expires.
+    */
   lazy val inProgressRetryAfter: Duration = Duration.millis(
     config.getLong(inProgressRetryAfterProperty)
   )
@@ -71,11 +97,17 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
 
   override def indexes: Seq[Index] = Seq(
     Index(
-      key = Seq(workItemFields.status -> IndexType.Ascending, workItemFields.updatedAt -> IndexType.Ascending),
+      key = Seq(
+        workItemFields.status -> IndexType.Ascending,
+        workItemFields.updatedAt -> IndexType.Ascending
+      ),
       unique = false,
       background = true),
     Index(
-      key = Seq(workItemFields.status -> IndexType.Ascending, workItemFields.availableAt -> IndexType.Ascending),
+      key = Seq(
+        workItemFields.status -> IndexType.Ascending,
+        workItemFields.availableAt -> IndexType.Ascending
+      ),
       unique = false,
       background = true),
     Index(
@@ -86,21 +118,43 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
 
   private def toDo(item: T): ProcessingStatus = ToDo
 
-  def pushNew(item: T, receivedAt: DateTime)(implicit ec: ExecutionContext): Future[WorkItem[T]] = pushNew(item, receivedAt, toDo _)
+  /** Creates a new [[WorkItem]] with status ToDo and availableAt equal to receivedAt */
+  def pushNew(item: T, receivedAt: DateTime)(implicit ec: ExecutionContext): Future[WorkItem[T]] =
+    pushNew(item, receivedAt, receivedAt, toDo _)
 
-  def pushNew(item: T, receivedAt: DateTime, initialState: T => ProcessingStatus)(implicit ec: ExecutionContext): Future[WorkItem[T]] = pushNew(item, receivedAt, receivedAt, initialState)
+  /** Creates a new [[WorkItem]] with availableAt equal to receivedAt */
+  def pushNew(item: T, receivedAt: DateTime, initialState: T => ProcessingStatus)(implicit ec: ExecutionContext): Future[WorkItem[T]] =
+    pushNew(item, receivedAt, receivedAt, initialState)
 
-  def pushNew(item: T, receivedAt: DateTime, availableAt: DateTime)(implicit ec: ExecutionContext): Future[WorkItem[T]] = pushNew(item, receivedAt, availableAt, toDo _)
+  /** Creates a new [[WorkItem]] with status ToDo */
+  def pushNew(item: T, receivedAt: DateTime, availableAt: DateTime)(implicit ec: ExecutionContext): Future[WorkItem[T]] =
+    pushNew(item, receivedAt, availableAt, toDo _)
 
+  /** Creates a new [[WorkItem]].
+    * @param item the item to store in the WorkItem
+    * @param receivedAt when the item was received (TODO not used interally, should be captured in `item: T` if required? (and could be inferred from defined `now`?)
+    * @param availableAt when to defer processing until
+    * @param initialState defines the initial state of the WorkItem for the item
+    */
   def pushNew(item: T, receivedAt: DateTime, availableAt: DateTime, initialState: T => ProcessingStatus)(implicit ec: ExecutionContext): Future[WorkItem[T]] = {
     val workItem = newWorkItem(receivedAt, availableAt, initialState)(item)
     insert(workItem).map(_ => workItem)
   }
 
-  def pushNew(items: Seq[T], receivedAt: DateTime)(implicit ec: ExecutionContext): Future[Seq[WorkItem[T]]] = pushNew(items, receivedAt, toDo _)
+  /** Creates a batch of new [[WorkItem]]s with status ToDo and availableAt equal to receivedAt */
+  def pushNew(items: Seq[T], receivedAt: DateTime)(implicit ec: ExecutionContext): Future[Seq[WorkItem[T]]] =
+    pushNew(items, receivedAt, receivedAt, toDo _)
 
-  def pushNew(items: Seq[T], receivedAt: DateTime, initialState: T => ProcessingStatus)(implicit ec: ExecutionContext): Future[Seq[WorkItem[T]]] = pushNew(items, receivedAt, receivedAt, initialState)
+  /** Creates a batch of new [[WorkItem]]s with availableAt equal to receivedAt */
+  def pushNew(items: Seq[T], receivedAt: DateTime, initialState: T => ProcessingStatus)(implicit ec: ExecutionContext): Future[Seq[WorkItem[T]]] =
+    pushNew(items, receivedAt, receivedAt, initialState)
 
+  /** Creates a batch of new [[WorkItem]]s.
+    * @param items the items to store as WorkItems
+    * @param receivedAt when the items were received (TODO can the items not all have different receivedAt dates - e.g. should be on the payload?)
+    * @param availableAt when to defer processing until
+    * @param initialState defines the initial state of the WorkItems for the item
+    */
   def pushNew(items: Seq[T], receivedAt: DateTime, availableAt: DateTime, initialState: T => ProcessingStatus)(implicit ec: ExecutionContext): Future[Seq[WorkItem[T]]] = {
     val workItems = items.map(newWorkItem(receivedAt, availableAt, initialState))
 
@@ -116,6 +170,18 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
     Json.reads[IdList]
   }
 
+  /** Returns a WorkItem to be processed, if available.
+    * The item will be atomically set to [[InProgress]], so it will not be picked up by other calls to pullOutstanding until
+    * it's status has been explicitly marked as Failed or ToDo, or it's progress status has timed out (set by [[inProgressRetryAfter]]).
+    *
+    * A WorkItem will be considered for processing in the following order:
+    * 1) Has ToDo status, and the availableAt field is before the availableBefore param.
+    * 2) Has Failed status, and it was marked as Failed before the failedBefore param.
+    * 3) Has InProgress status, and was marked as InProgress before the inProgressRetryAfter configuration. Basically a timeout to ensure WorkItems that don't advance from InProgress do not get stuck.
+    *
+    * @param failedBefore it will only consider WorkItems in FailedState if they were marked as Failed before the failedBefore. This can avoid retrying a failure immediately.
+    * @param availableBefore it will only consider WorkItems where the availableAt field is before the availableBefore
+    */
   def pullOutstanding(failedBefore: DateTime, availableBefore: DateTime)(implicit ec: ExecutionContext): Future[Option[WorkItem[T]]] = {
 
     def getWorkItem(idList: IdList): Future[Option[WorkItem[T]]] = {
@@ -142,43 +208,58 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
         _.value.map(Json.toJson(_).as[IdList])
       )
 
-    def todoQuery(failedBefore: DateTime, availableBefore: DateTime): JsObject = {
-      Json.obj(workItemFields.status -> ToDo,       workItemFields.availableAt -> Json.obj("$lt" -> availableBefore))
-    }
+    def todoQuery: JsObject =
+      Json.obj(
+        workItemFields.status -> ToDo,
+        workItemFields.availableAt -> Json.obj("$lt" -> availableBefore)
+      )
 
-    def failedQuery(failedBefore: DateTime, availableBefore: DateTime): JsObject = {
+    def failedQuery: JsObject =
       Json.obj("$or" -> Seq(
-        Json.obj(workItemFields.status -> Failed,     workItemFields.updatedAt -> Json.obj("$lt" -> failedBefore), workItemFields.availableAt -> Json.obj("$lt" -> availableBefore)),
-        Json.obj(workItemFields.status -> Failed,     workItemFields.updatedAt -> Json.obj("$lt" -> failedBefore), workItemFields.availableAt -> Json.obj("$exists" -> false))
+        Json.obj(workItemFields.status -> Failed, workItemFields.updatedAt -> Json.obj("$lt" -> failedBefore), workItemFields.availableAt -> Json.obj("$lt" -> availableBefore)),
+        Json.obj(workItemFields.status -> Failed, workItemFields.updatedAt -> Json.obj("$lt" -> failedBefore), workItemFields.availableAt -> Json.obj("$exists" -> false))
       ))
-    }
 
-    def inProgressQuery(failedBefore: DateTime, availableBefore: DateTime): JsObject = {
-      Json.obj(workItemFields.status -> InProgress, workItemFields.updatedAt -> Json.obj("$lt" -> now.minus(inProgressRetryAfter)))
-    }
 
-    findNextItemIdByQuery(todoQuery(failedBefore, availableBefore)).flatMap {
-      case None => findNextItemIdByQuery(failedQuery(failedBefore, availableBefore)).flatMap {
-        case None => findNextItemIdByQuery(inProgressQuery(failedBefore, availableBefore))
+    def inProgressQuery: JsObject =
+      Json.obj(
+        workItemFields.status -> InProgress,
+        workItemFields.updatedAt -> Json.obj("$lt" -> now.minus(inProgressRetryAfter))
+      )
+
+    findNextItemIdByQuery(todoQuery).flatMap {
+      case None => findNextItemIdByQuery(failedQuery).flatMap {
+        case None => findNextItemIdByQuery(inProgressQuery)
         case item => Future.successful(item)
       }
       case item => Future.successful(item)
     }
   }
 
+  /** Sets the ProcessingStatus of a WorkItem.
+    * It will also update the updatedAt timestamp.
+    */
   def markAs(id: ID, status: ProcessingStatus, availableAt: Option[DateTime] = None)(implicit ec: ExecutionContext): Future[Boolean] =
     collection.update(
       selector = Json.obj(workItemFields.id -> id),
       update = setStatusOperation(status, availableAt)
     ).map(_.n > 0)
 
-  def complete(id: ID, newStatus: ProcessingStatus with ResultStatus)(implicit ec: ExecutionContext): Future[Boolean] = {
+  /** Sets the ProcessingStatus of a WorkItem to a ResultStatus.
+    * It will also update the updatedAt timestamp.
+    * It will return false if the WorkItem is not InProgress.
+    */
+  def complete(id: ID, newStatus: ProcessingStatus with ResultStatus)(implicit ec: ExecutionContext): Future[Boolean] =
     collection.update(
       selector = Json.obj(workItemFields.id -> id, workItemFields.status -> InProgress),
       update = setStatusOperation(newStatus, None)
     ).map(_.nModified > 0)
-  }
 
+  /** Sets the ProcessingStatus of a WorkItem to Cancelled.
+    * @return [[StatusUpdateResult.Updated]] if the WorkItem is cancelled,
+    * [[StatusUpdateResult.NotFound]] if it's not found,
+    * and [[StatusUpdateResult.NotUpdated]] if it's not in a cancellable ProcessingStatus.
+    */
   def cancel(id: ID)(implicit ec: ExecutionContext): Future[StatusUpdateResult] = {
     import uk.gov.hmrc.workitem.StatusUpdateResult._
     findAndUpdate(
@@ -202,6 +283,7 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
     }
   }
 
+  /** Returns the number of WorkItems in the specified ProcessingStatus */
   def count(state: ProcessingStatus)(implicit ec: ExecutionContext): Future[Int] =
     count(Json.obj(workItemFields.status -> state.name), ReadPreference.secondaryPreferred)
 
@@ -211,9 +293,12 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
       workItemFields.updatedAt -> now
     ) ++ availableAt.map(when => Json.obj(workItemFields.availableAt -> when)).getOrElse(Json.obj())
 
-    val statusUpdate = Json.obj("$set" -> fields)
-    if (newStatus == Failed) statusUpdate ++ Json.obj("$inc" -> Json.obj(workItemFields.failureCount -> 1))
-    else statusUpdate
+    val ifFailed =
+      if (newStatus == Failed)
+        Json.obj("$inc" -> Json.obj(workItemFields.failureCount -> 1))
+      else Json.obj()
+
+    Json.obj("$set" -> fields) ++ ifFailed
   }
 
 }

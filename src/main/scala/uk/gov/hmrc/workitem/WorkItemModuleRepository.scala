@@ -26,6 +26,12 @@ import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 import scala.concurrent.{ExecutionContext, Future}
 
+/** If you have multiple lifecycles on a WorkItem, you can use the WorkItemModuleRepository
+  * to interact with those lifecycles.
+  * It will namespace the lifecycle fields with the provided moduleName.
+  * It assumes creation of WorkItems are made through another view (e.g. a standard [[WorkItemRepository]]), it will
+  * only allow interacting with the WorkItem lifecycle, and will throw runtime exceptions if `pushNew` is called.
+  */
 abstract class WorkItemModuleRepository[T](collectionName: String,
                                            moduleName: String,
                                            mongo: () => DB,
@@ -60,18 +66,18 @@ object WorkItemModuleRepository {
 
   implicit val dateReads: Reads[DateTime] = ReactiveMongoFormats.dateTimeRead
 
-  private val updatedAtProperty: String = "updatedAt"
-  private val createdAtProperty: String = "createdAt"
+  private val updatedAtProperty   : String = "updatedAt"
+  private val createdAtProperty   : String = "createdAt"
   private val failureCountProperty: String = "failureCount"
-  private val statusProperty: String = "status"
+  private val statusProperty      : String = "status"
 
   def workItemFieldNames(moduleName: String) = new WorkItemFieldNames {
-    override val availableAt: String = s"$moduleName.$createdAtProperty"
-    override val updatedAt: String = s"$moduleName.$updatedAtProperty"
+    override val availableAt : String = s"$moduleName.$createdAtProperty"
+    override val updatedAt   : String = s"$moduleName.$updatedAtProperty"
     override val failureCount: String = s"$moduleName.$failureCountProperty"
-    override val status: String = s"$moduleName.$statusProperty"
-    override val receivedAt: String = availableAt
-    override val id: String = "_id"
+    override val status      : String = s"$moduleName.$statusProperty"
+    override val receivedAt  : String = availableAt
+    override val id          : String = "_id"
   }
 
   def upsertModuleQuery(moduleName: String, time: DateTime) = {
@@ -86,21 +92,20 @@ object WorkItemModuleRepository {
 
 
   def formatsOf[T](moduleName:String)(implicit trd:Reads[T]): Format[WorkItem[T]] = {
-    val reads: Reads[WorkItem[T]] = (
-      (__ \ "_id").read[BSONObjectID] and
-        (__ \ moduleName \ s"$createdAtProperty").read[DateTime] and
-        (__ \ moduleName \ s"$updatedAtProperty").read[DateTime] and
-        (__ \ moduleName \ s"$createdAtProperty").read[DateTime] and
-        (__ \ moduleName \ s"$statusProperty").read[ProcessingStatus] and
-        (__ \ moduleName \ s"$failureCountProperty").read[Int].orElse(Reads.pure(0)) and
-        __.read[T]
-      ) (WorkItem.apply[T] _)
+    val reads: Reads[WorkItem[T]] =
+      ( (__ \ "_id").read[BSONObjectID]
+      ~ (__ \ moduleName \ s"$createdAtProperty").read[DateTime]
+      ~ (__ \ moduleName \ s"$updatedAtProperty").read[DateTime]
+      ~ (__ \ moduleName \ s"$createdAtProperty").read[DateTime]
+      ~ (__ \ moduleName \ s"$statusProperty").read[ProcessingStatus]
+      ~ (__ \ moduleName \ s"$failureCountProperty").read[Int].orElse(Reads.pure(0))
+      ~ __.read[T]
+      )(WorkItem.apply[T] _)
 
     val writes: Writes[WorkItem[T]] = new Writes[WorkItem[T]] {
       override def writes(o: WorkItem[T]): JsValue = throw new IllegalStateException("A work item module is not supposed to be written")
     }
 
     Format(reads, writes)
-
   }
 }
