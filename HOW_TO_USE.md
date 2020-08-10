@@ -4,7 +4,7 @@
 
 ### WorkItemModuleRepository
 
-See Scaladoc for [WorkItemRepository](../blob/master/src/main/scala/uk/gov/hmrc/workitem/WorkItemRepository.scala)
+See Scaladoc for [WorkItemRepository](../master/src/main/scala/uk/gov/hmrc/workitem/WorkItemRepository.scala)
 
 Typically you will use `uk.gov.hmrc.workitem.WorkItemRepository` to create and retrieve `WorkItem`s for processing.
 It is parameterised by the Id representation (typically `BSONObjectID` or `String`) and your PAYLOAD representation.

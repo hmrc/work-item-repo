@@ -18,7 +18,7 @@ libraryDependencies += "uk.gov.hmrc" %% "work-item-repo" % "[INSERT-VERSION]"
 
 ## How to Use
 
-See [How to Use](../blob/master/HOW_TO_USE.md)
+See [How to Use](../master/HOW_TO_USE.md)
 
 ## Compatibility
 
