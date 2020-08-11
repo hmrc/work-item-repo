@@ -30,7 +30,7 @@ import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import scala.concurrent.{ExecutionContext, Future}
 
 /** The repository to set and get the work item's for processing.
-  * See [[pushNew(T,DateTime)*]] for creating work items, and [[pullOutstanding]] for retrieving them.
+  * See [[pushNew(T,DateTime)]] for creating work items, and [[pullOutstanding]] for retrieving them.
   */
 abstract class WorkItemRepository[T, ID](collectionName: String,
                                          mongo: () => DB,
@@ -151,7 +151,7 @@ abstract class WorkItemRepository[T, ID](collectionName: String,
 
   /** Creates a batch of new [[WorkItem]]s.
     * @param items the items to store as WorkItems
-    * @param receivedAt when the items were received (TODO can the items not all have different receivedAt dates - e.g. should be on the payload?)
+    * @param receivedAt when the items were received
     * @param availableAt when to defer processing until
     * @param initialState defines the initial state of the WorkItems for the item
     */
