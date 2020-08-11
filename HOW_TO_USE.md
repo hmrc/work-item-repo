@@ -71,6 +71,6 @@ def process: Future[Unit] =
         case Success => workItemRepository.complete(wi.id) // mark as completed
         case Failure if wi.failureCount < config.maxRetries => workItemRepository.markAs(wi.id, Failed, None) // mark as failed - it will be reprocessed after a duration specified by `inProgressRetryAfterProperty`
         case Failure => workItemRepository.markAs(wi.id, PermanentlyFailed, None) // you can also mark as any other status defined by `ProcessingStatus`
-      }.flatMap(process) // and repeat
+      }.flatMap(_ => process) // and repeat
     }
 ```
