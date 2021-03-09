@@ -24,11 +24,11 @@ See [How to Use](../master/HOW_TO_USE.md)
 
 |Library Version|Scala Version|Play Version|
 |--------|-------------|---------------|
-|>=7.2.x | 2.12        | 2.7           |
+|8.x.x   | 2.12        | 2.6, 2.7, 2.8 |
+|>=7.2.x | 2.12        | 2.6, 2.7      |
 |7.x.x   | 2.11, 2.12  | 2.6           |
 |6.x.x   | 2.11        | 2.6, 2.5      |
 
-From 7.x.x onwards support for Play 2.5 has been dropped. If you use Play 2.5 continue to use the 6.x.x branch and consider upgrading.
 work-item-repo since version 6.0.0 uses the latest ReactiveMongo (https://github.com/ReactiveMongo/ReactiveMongo) instead of HMRC fork of it (https://github.com/hmrc/ReactiveMongo). Please review your dependencies if you upgrade. In particular you should no longer use https://github.com/hmrc/Play-ReactiveMongo/ in your microservice.
 
 ### License

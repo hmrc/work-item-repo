@@ -1,25 +1,15 @@
-import PlayCrossCompilation._
-import uk.gov.hmrc.DefaultBuildSettings.defaultSettings
-
-enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning, SbtArtifactory)
-
 name := "work-item-repo"
+
+enablePlugins(SbtAutoBuildPlugin, SbtGitVersioning)
 
 makePublicallyAvailableOnBintray := true
 
-majorVersion                     := 7
+majorVersion := 8
 
-defaultSettings()
-
-scalaVersion := "2.12.10"
-
-crossScalaVersions  := Seq("2.11.12", "2.12.10")
+scalaVersion := "2.12.13"
 
 libraryDependencies ++= LibDependencies.compile ++ LibDependencies.test
 
-resolvers := Seq(
-  Resolver.bintrayRepo("hmrc", "releases"),
-  "typesafe-releases" at "http://repo.typesafe.com/typesafe/releases/"
-)
+resolvers += Resolver.typesafeRepo("releases")
 
-playCrossCompilationSettings
+PlayCrossCompilation.playCrossCompilationSettings

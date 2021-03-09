@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,9 @@
 
 package uk.gov.hmrc.workitem
 
-import org.scalatest.{LoneElement, Matchers, WordSpec}
+import org.scalatest.LoneElement
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.time.DateTimeUtils
@@ -24,19 +26,19 @@ import uk.gov.hmrc.time.DateTimeUtils
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class WorkItemRepositorySpec extends WordSpec
-  with Matchers
-  with WithWorkItemRepository
-  with LoneElement {
+class WorkItemRepositorySpec
+  extends AnyWordSpec
+     with Matchers
+     with WithWorkItemRepository
+     with LoneElement {
 
-  def createWorkItemsWith(statuses: Seq[ProcessingStatus]) = {
+  def createWorkItemsWith(statuses: Seq[ProcessingStatus]) =
     Future.traverse(statuses) { status =>
       for {
         item <- repo.pushNew(item1, DateTimeUtils.now)
         _ <- repo.markAs(item.id, status)
       } yield ()
     }.futureValue
-  }
 
   "The work item repo as metrics source" should {
     "return the counts for the all processing statuses as map of metrics" in {

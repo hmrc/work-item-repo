@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,10 @@
 package uk.gov.hmrc.workitem
 
 import org.joda.time.DateTime
+import org.scalatest.{BeforeAndAfterEach}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.json.{JsObject, Json, Writes}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.ImplicitBSONHandlers._
@@ -26,12 +28,14 @@ import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class WorkItemModuleRepositorySpec extends WordSpec
-                                      with Matchers
-                                      with ScalaFutures
-                                      with BeforeAndAfterEach
-                                      with IntegrationPatience
-                                      with WithWorkItemRepositoryModule {
+class WorkItemModuleRepositorySpec
+  extends AnyWordSpec
+     with Matchers
+     with ScalaFutures
+     with BeforeAndAfterEach
+     with IntegrationPatience
+     with WithWorkItemRepositoryModule {
+
   implicit val formats = ExampleItemWithModule.formats
   implicit val dateWrites: Writes[DateTime] = ReactiveMongoFormats.dateTimeWrite
 
