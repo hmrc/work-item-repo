@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 HM Revenue & Customs
+ * Copyright 2021 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,12 @@
 
 package uk.gov.hmrc.workitem
 
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.json.{JsError, JsString, Json}
-import reactivemongo.bson.{BSONValue, BSON, BSONString}
+import reactivemongo.bson.{BSON, BSONString}
 
-class ProcessingStatusSpec extends WordSpec with Matchers {
+class ProcessingStatusSpec extends AnyWordSpec with Matchers {
   "reading processing status from JSON" should {
     "handle ToDo" in {
       Json.parse("\"todo\"").as[ProcessingStatus] should be(ToDo)
@@ -52,28 +53,28 @@ class ProcessingStatusSpec extends WordSpec with Matchers {
   }
   "writing processing status to JSON" should {
     "handle ToDo" in {
-      Json.toJson(ToDo) should be (JsString("todo"))
+      Json.toJson[ProcessingStatus](ToDo) should be (JsString("todo"))
     }
     "handle InProgress" in {
-      Json.toJson(InProgress) should be (JsString("in-progress"))
+      Json.toJson[ProcessingStatus](InProgress) should be (JsString("in-progress"))
     }
     "handle Succeeded" in {
-      Json.toJson(Succeeded) should be (JsString("succeeded"))
+      Json.toJson[ProcessingStatus](Succeeded) should be (JsString("succeeded"))
     }
     "handle Failed" in {
-      Json.toJson(Failed) should be (JsString("failed"))
+      Json.toJson[ProcessingStatus](Failed) should be (JsString("failed"))
     }
     "handle PermanentlyFailed" in {
-      Json.toJson(PermanentlyFailed) should be (JsString("permanently-failed"))
+      Json.toJson[ProcessingStatus](PermanentlyFailed) should be (JsString("permanently-failed"))
     }
     "handle Ignored" in {
-      Json.toJson(Ignored) should be (JsString("ignored"))
+      Json.toJson[ProcessingStatus](Ignored) should be (JsString("ignored"))
     }
     "handle Duplicate" in {
-      Json.toJson(Duplicate) should be (JsString("duplicate"))
+      Json.toJson[ProcessingStatus](Duplicate) should be (JsString("duplicate"))
     }
     "handle Cancelled" in {
-      Json.toJson(Cancelled) should be (JsString("cancelled"))
+      Json.toJson[ProcessingStatus](Cancelled) should be (JsString("cancelled"))
     }
   }
   "reading processing status from BSON" should {

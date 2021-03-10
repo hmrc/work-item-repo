@@ -20,37 +20,38 @@ object LibDependencies {
 
   def apply(): Seq[ModuleID] = compile ++ test
 
-  private val play26Version = "2.6.23"
-  private val play27Version = "2.7.4"
+  private val play26Version = "2.6.25"
+  private val play27Version = "2.7.9"
+  private val play28Version = "2.8.7"
 
   val compile: Seq[ModuleID] = PlayCrossCompilation.dependencies(
-    shared = Seq(
-      "io.dropwizard.metrics" % "metrics-graphite"      % "3.2.5"
-    ),
     play26 = Seq(
-      "com.typesafe.play"     %% "play"                 % play26Version,
-      "com.kenshoo"           %% "metrics-play"         % "2.6.19_0.7.0",
-      "uk.gov.hmrc"           %% "metrix"               % "4.7.0-play-26"
+      "uk.gov.hmrc"           %% "metrix"               % "5.0.0-play-26"
     ),
     play27 = Seq(
-      "com.typesafe.play"     %% "play"                 % play27Version,
-      "com.kenshoo"           %% "metrics-play"         % "2.6.19_0.7.0",
-      "uk.gov.hmrc"           %% "metrix"               % "4.7.0-play-27"
+      "uk.gov.hmrc"           %% "metrix"               % "5.0.0-play-27"
+    ),
+    play28 = Seq(
+      "uk.gov.hmrc"           %% "metrix"               % "5.0.0-play-26"
     )
   )
 
   val test: Seq[ModuleID] = PlayCrossCompilation.dependencies(
     shared = Seq(
-      "org.pegdown"    % "pegdown"     % "1.6.0"          % Test,
-      "org.scalatest"  %% "scalatest"  % "3.0.5"          % Test
+      "org.scalatest"        %% "scalatest"          % "3.1.4"       % Test,
+      "com.vladsch.flexmark" %  "flexmark-all"       % "0.36.8"      % Test
     ),
     play26 = Seq(
-      "com.typesafe.play" %% "play-test"          % play26Version     % Test,
-      "uk.gov.hmrc"       %% "reactivemongo-test" % "4.21.0-play-26"  % Test
+      "com.typesafe.play"    %% "play-test"          % play26Version   % Test,
+      "uk.gov.hmrc"          %% "reactivemongo-test" % "5.0.0-play-26" % Test,
     ),
     play27 = Seq(
-      "com.typesafe.play" %% "play-test"          % play27Version     % Test,
-      "uk.gov.hmrc"       %% "reactivemongo-test" % "4.21.0-play-27"  % Test
+      "com.typesafe.play"    %% "play-test"          % play27Version   % Test,
+      "uk.gov.hmrc"          %% "reactivemongo-test" % "5.0.0-play-27" % Test,
+    ),
+    play28 = Seq(
+      "com.typesafe.play"    %% "play-test"          % play28Version   % Test,
+      "uk.gov.hmrc"          %% "reactivemongo-test" % "5.0.0-play-28" % Test,
     )
   )
 }
