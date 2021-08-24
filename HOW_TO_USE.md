@@ -13,7 +13,7 @@ It is an abstract class, so you will have to extend it to define the following:
 
 * `def now: DateTime` - gets the current timestamp for setting the WorkItem updatedAt field.
 * `def workItemFields: WorkItemFieldNames` - defines how to map the WorkItem into your mongo collection.
-* `def inProgressRetryAfterProperty: String` - defines the configuration key for setting how long to wait before retrying InProgress WorkItems which may now have become "stucked".
+* `def inProgressRetryAfterProperty: String` - defines the configuration key for setting how long to wait before retrying InProgress WorkItems which may now have become "stuck".
 
 
 
